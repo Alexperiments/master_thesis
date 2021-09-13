@@ -135,7 +135,7 @@ def main():
 
 
 if __name__ == "__main__":
-    try_model = False
+    try_model = True
 
     if try_model:
         # Will just use pretrained weights and run on images
@@ -148,7 +148,7 @@ if __name__ == "__main__":
             opt_gen,
             config.LEARNING_RATE,
         )
-        plot_examples("test_images/", gen)
+        plot_examples("data/lr/", gen)
     else:
         # This will train from scratch
         main()

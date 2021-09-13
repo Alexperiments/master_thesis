@@ -56,12 +56,17 @@ def plot_examples(low_res_folder, gen):
 
     gen.eval()
     for file in files:
-        image = Image.open("test_images/" + file)
+        image = Image.open("data/lr/" + file)
+
+        # Upscaling 1 channel to 3 channels: our images are in gray scale.
+        rgbimg = Image.new("RGB", image.size)
+        rgbimg.paste(image)
+
         with torch.no_grad():
             upscaled_img = gen(
-                config.test_transform(image=np.asarray(image))["image"]
+                config.test_transform(image=np.asarray(rgbimg))["image"]
                 .unsqueeze(0)
                 .to(config.DEVICE)
             )
-        save_image(upscaled_img, f"saved/{file}")
+        save_image(upscaled_img, f"upscaled/{file}")
     gen.train()
