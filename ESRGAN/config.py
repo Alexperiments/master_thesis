@@ -3,7 +3,7 @@ from PIL import Image
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-LOAD_MODEL = False
+LOAD_MODEL = True
 SAVE_MODEL = True
 CHECKPOINT_GEN = "gen.pth.tar"
 CHECKPOINT_DISC = "disc.pth.tar"
@@ -21,5 +21,12 @@ transform = A.Compose(
     [
      A.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
      ToTensorV2(),
+    ]
+)
+
+test_transform = A.Compose(
+    [
+        A.Normalize(mean=[0, 0, 0], std=[1, 1, 1]),
+        ToTensorV2(),
     ]
 )
