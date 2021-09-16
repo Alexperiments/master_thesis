@@ -4,3 +4,4 @@
 *pth.tar
 *.ipynb
 **/upscaled/
+**/wandb/
