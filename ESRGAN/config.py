@@ -3,10 +3,10 @@ from PIL import Image
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-LOAD_MODEL = False
+LOAD_MODEL = True
 SAVE_MODEL = True
-CHECKPOINT_GEN = "gen_noVGG.pth.tar"
-CHECKPOINT_DISC = "disc_noVGG.pth.tar"
+CHECKPOINT_GEN = "gen.pth.tar"
+CHECKPOINT_DISC = "disc.pth.tar"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LEARNING_RATE = 1e-4
 NUM_EPOCHS = 10000
