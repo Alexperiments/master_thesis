@@ -65,7 +65,7 @@ class RRDB(nn.Module):
 
 
 class Generator(nn.Module):
-    def __init__(self, in_channels=3, num_channels=64, num_blocks=23):
+    def __init__(self, in_channels, num_channels=64, num_blocks=23):
         super().__init__()
         self.initial = nn.Conv2d(
             in_channels,
@@ -94,7 +94,7 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, in_channels=3, features=[64, 64, 128, 128, 256, 256, 512, 512]):
+    def __init__(self, in_channels, features=[64, 64, 128, 128, 256, 256, 512, 512]):
         super().__init__()
         blocks = []
         for idx, feature in enumerate(features):

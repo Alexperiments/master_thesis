@@ -84,8 +84,8 @@ def main():
         pin_memory=True,
         num_workers=config.NUM_WORKERS,
     )
-    gen = Generator(in_channels=3).to(config.DEVICE)
-    disc = Discriminator(in_channels=3).to(config.DEVICE)
+    gen = Generator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
+    disc = Discriminator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
     initialize_weights(gen)
     opt_gen = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE, betas=(0.0, 0.9))
     opt_disc = optim.Adam(disc.parameters(), lr=config.LEARNING_RATE, betas=(0.0, 0.9))
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     if try_model:
         # Will just use pretrained weights and run on images
         # in test_images/ and save the ones to SR in saved/
-        gen = Generator(in_channels=3).to(config.DEVICE)
+        gen = Generator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
         opt_gen = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE, betas=(0.0, 0.9))
         load_checkpoint(
             config.CHECKPOINT_GEN,

@@ -8,6 +8,7 @@ from model import Generator, Discriminator, initialize_weights
 from tqdm import tqdm
 from dataset import MyImageFolder
 from torch.utils.tensorboard import SummaryWriter
+import wandb
 
 torch.backends.cudnn.benchmark = True
 
@@ -50,6 +51,13 @@ def train_fn(
             adversarial_loss = 5e-3 * -torch.mean(disc(fake))
             gen_loss = l1_loss + adversarial_loss
 
+        wandb.log(
+            {
+                "l1_loss": l1_loss, "adversarial_loss": adversarial_loss,
+                'loss_critic':loss_critic, 'Gen loss':gen_loss
+            }
+        )
+
         opt_gen.zero_grad()
         g_scaler.scale(gen_loss).backward()
         g_scaler.step(opt_gen)
@@ -72,7 +80,7 @@ def train_fn(
 
 
 def main():
-    dataset = MyImageFolder(root_dir="data_single/")
+    dataset = MyImageFolder(root_dir="data/")
     loader = DataLoader(
         dataset,
         batch_size=config.BATCH_SIZE,
@@ -108,6 +116,14 @@ def main():
             config.LEARNING_RATE,
         )
 
+    wandb.init(
+        entity='aled',
+        project="Tesi-ML-ESRGAN",
+        config={
+        "learning_rate": config.LEARNING_RATE,
+        "architecture": "ESRGAN",
+        }
+    )
 
     for epoch in range(config.NUM_EPOCHS):
         tb_step = train_fn(
@@ -127,6 +143,8 @@ def main():
             save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
             save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
 
+    wandb.finish()
+
 
 if __name__ == "__main__":
     try_model = False
@@ -142,7 +160,7 @@ if __name__ == "__main__":
             opt_gen,
             config.LEARNING_RATE,
         )
-        plot_examples("data_single/lr/", gen)
+        plot_examples("data/lr/", gen)
     else:
         # This will train from scratch
         main()
