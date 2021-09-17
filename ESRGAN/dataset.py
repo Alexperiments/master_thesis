@@ -24,12 +24,12 @@ class MyImageFolder(Dataset):
 
         root_and_lr = os.path.join(self.root_dir, "lr")
         low_res = cv2.imread(os.path.join(root_and_lr, file_name))
-        low_res = cv2.cvtColor(low_res, cv2.COLOR_BGR2GRAY if config.IMG_CHANNELS==1 else cv2.COLOR_BGR2RGB)
+        low_res = cv2.cvtColor(low_res, cv2.COLOR_BGR2RGB)
         low_res = config.transform(image=low_res)["image"]
 
         root_and_hr = os.path.join(self.root_dir, "hr")
         high_res = cv2.imread(os.path.join(root_and_hr, file_name))
-        high_res = cv2.cvtColor(high_res, cv2.COLOR_BGR2GRAY if config.IMG_CHANNELS==1 else cv2.COLOR_BGR2RGB)
+        high_res = cv2.cvtColor(high_res, cv2.COLOR_BGR2RGB)
         high_res = config.transform(image=high_res)["image"]
 
         return low_res, high_res
