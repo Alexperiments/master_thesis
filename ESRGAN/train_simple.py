@@ -116,7 +116,6 @@ def main():
             config.LEARNING_RATE,
         )
 
-    wandb.login()
     wandb.init(
         entity='aled',
         project="Tesi-ML-ESRGAN",
