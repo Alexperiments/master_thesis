@@ -3,7 +3,7 @@ from PIL import Image
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-LOAD_MODEL = True
+LOAD_MODEL = False
 SAVE_MODEL = True
 CHECKPOINT_GEN = "gen.pth.tar"
 CHECKPOINT_DISC = "disc.pth.tar"
@@ -15,18 +15,18 @@ LAMBDA_GP = 10
 NUM_WORKERS = 2
 HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
-IMG_CHANNELS = 3
+IMG_CHANNELS = 1
 
 transform = A.Compose(
     [
-     A.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+     A.Normalize(mean=[0.5 for _ in range(IMG_CHANNELS)], std=[0.5 for _ in range(IMG_CHANNELS)]),
      ToTensorV2(),
     ]
 )
 
 test_transform = A.Compose(
     [
-        A.Normalize(mean=[0, 0, 0], std=[1, 1, 1]),
+        A.Normalize(mean=[0 for _ in range(IMG_CHANNELS)], std=[1 for _ in range(IMG_CHANNELS)]),
         ToTensorV2(),
     ]
 )
