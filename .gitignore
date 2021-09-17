@@ -6,3 +6,4 @@
 **/upscaled/
 *.zip
 **/wandb/
+**/data_single/
