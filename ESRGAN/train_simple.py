@@ -139,9 +139,10 @@ def main():
             tb_step,
         )
 
-        if config.SAVE_MODEL:
-            save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
-            save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
+        if epoch % 50 == 0:
+            if config.SAVE_MODEL:
+                save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
+                save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
 
     wandb.finish()
 
