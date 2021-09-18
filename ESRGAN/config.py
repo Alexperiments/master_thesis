@@ -5,12 +5,13 @@ from albumentations.pytorch import ToTensorV2
 
 LOAD_MODEL = True
 SAVE_MODEL = True
+SAVE_IMG_CHKPNT = False
 CHECKPOINT_GEN = "gen.pth.tar"
 CHECKPOINT_DISC = "disc.pth.tar"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-LEARNING_RATE = 1e-6
-NUM_EPOCHS = 400
-BATCH_SIZE = 4
+LEARNING_RATE = 4e-6
+NUM_EPOCHS = 1000
+BATCH_SIZE = 16
 LAMBDA_GP = 10
 NUM_WORKERS = 2
 HIGH_RES = 80
