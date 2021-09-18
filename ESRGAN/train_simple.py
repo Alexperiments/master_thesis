@@ -8,6 +8,7 @@ from model import Generator, Discriminator, initialize_weights
 from tqdm import tqdm
 from dataset import MyImageFolder
 from torch.utils.tensorboard import SummaryWriter
+from loss import bright_loss
 import wandb
 
 torch.backends.cudnn.benchmark = True
@@ -19,6 +20,7 @@ def train_fn(
     opt_gen,
     opt_disc,
     l1,
+    brightness_loss,
     g_scaler,
     d_scaler,
     writer,
@@ -47,14 +49,15 @@ def train_fn(
 
         # Train Generator: min log(1 - D(G(z))) <-> max log(D(G(z))
         with torch.cuda.amp.autocast():
-            l1_loss =  0.25 *l1(fake, high_res)
-            adversarial_loss = 0.21 * -torch.mean(disc(fake))
-            gen_loss = l1_loss + adversarial_loss
+            l1_loss = 5 * l1(fake, high_res)
+            adversarial_loss = 0.1 * -torch.mean(disc(fake))
+            br_loss = 1e-3 * brightness_loss(fake, high_res)
+            gen_loss = l1_loss + adversarial_loss + br_loss
 
         wandb.log(
             {
-                "l1_loss": l1_loss, "adversarial_loss": adversarial_loss,
-                'loss_critic':loss_critic, 'Gen loss':gen_loss
+                "l1_loss": l1_loss, "adversarial_loss": adversarial_loss, 'brightness_loss': br_loss,
+                'gradient_penalty':gp, 'loss_critic':loss_critic, 'Gen loss':gen_loss,
             }
         )
 
@@ -98,6 +101,7 @@ def main():
     l1 = nn.L1Loss()
     gen.train()
     disc.train()
+    brightness_loss = bright_loss()
 
     g_scaler = torch.cuda.amp.GradScaler()
     d_scaler = torch.cuda.amp.GradScaler()
@@ -133,6 +137,7 @@ def main():
             opt_gen,
             opt_disc,
             l1,
+            brightness_loss,
             g_scaler,
             d_scaler,
             writer,
@@ -145,11 +150,14 @@ def main():
                 save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
                 save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
 
+        if epoch % 10 == 0:
+            plot_examples("data_single/lr/", gen, 'checkpoints/'+str(epoch)+'/')
+
     wandb.finish()
 
 
 if __name__ == "__main__":
-    try_model = True
+    try_model = False
 
     if try_model:
         # Will just use pretrained weights and run on images
@@ -162,7 +170,7 @@ if __name__ == "__main__":
             opt_gen,
             config.LEARNING_RATE,
         )
-        plot_examples("data_single/lr/", gen)
+        plot_examples("data_single/lr/", gen, 'upscaled/')
     else:
         # This will train from scratch
         main()

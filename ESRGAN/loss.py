@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torchvision.models import vgg19
 import config
@@ -21,9 +22,9 @@ class VGGLoss(nn.Module):
 class bright_loss(nn.Module):
     def __init__(self):
         super().__init__()
-        self.loss = nn.MAELoss()
+        self.loss = nn.L1Loss()
 
     def forward(self, input, target):
-        input_brightness = np.sum(input, axis=None)
-        target_brightness = np.sum(target, axis=None)
+        input_brightness = torch.sum(input, dim=[2,3], keepdim=True)
+        target_brightness = torch.sum(target, dim=[2,3], keepdim=True)
         return self.loss(input_brightness, target_brightness)

@@ -51,7 +51,7 @@ def load_checkpoint(checkpoint_file, model, optimizer, lr):
         param_group["lr"] = lr
 
 
-def plot_examples(low_res_folder, gen):
+def plot_examples(low_res_folder, gen, target_folder):
     files = os.listdir(low_res_folder)
 
     gen.eval()
@@ -68,5 +68,6 @@ def plot_examples(low_res_folder, gen):
                 .unsqueeze(0)
                 .to(config.DEVICE)
             )
-        save_image(upscaled_img, f"upscaled/{file}")
+        os.system(f"mkdir -p {target_folder}")
+        save_image(upscaled_img, target_folder + file)
     gen.train()
