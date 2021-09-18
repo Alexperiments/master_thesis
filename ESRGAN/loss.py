@@ -17,3 +17,13 @@ class VGGLoss(nn.Module):
         vgg_input_features = self.vgg(input)
         vgg_target_features = self.vgg(target)
         return self.loss(vgg_input_features, vgg_target_features)
+
+class bright_loss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.loss = nn.MAELoss()
+
+    def forward(self, input, target):
+        input_brightness = np.sum(input, axis=None)
+        target_brightness = np.sum(target, axis=None)
+        return self.loss(input_brightness, target_brightness)

@@ -47,8 +47,8 @@ def train_fn(
 
         # Train Generator: min log(1 - D(G(z))) <-> max log(D(G(z))
         with torch.cuda.amp.autocast():
-            l1_loss = 1e-2 * l1(fake, high_res)
-            adversarial_loss = 5e-3 * -torch.mean(disc(fake))
+            l1_loss =  0.25 *l1(fake, high_res)
+            adversarial_loss = 0.21 * -torch.mean(disc(fake))
             gen_loss = l1_loss + adversarial_loss
 
         wandb.log(
@@ -80,7 +80,7 @@ def train_fn(
 
 
 def main():
-    dataset = MyImageFolder(root_dir="data/")
+    dataset = MyImageFolder(root_dir="data_single/")
     loader = DataLoader(
         dataset,
         batch_size=config.BATCH_SIZE,
@@ -125,7 +125,7 @@ def main():
         }
     )
 
-    for epoch in range(config.NUM_EPOCHS):
+    for epoch in range(config.NUM_EPOCHS+1):
         tb_step = train_fn(
             loader,
             disc,
@@ -139,6 +139,7 @@ def main():
             tb_step,
         )
 
+        print("{0}/{1}".format(epoch,config.NUM_EPOCHS))
         if epoch % 50 == 0:
             if config.SAVE_MODEL:
                 save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
@@ -148,7 +149,7 @@ def main():
 
 
 if __name__ == "__main__":
-    try_model = False
+    try_model = True
 
     if try_model:
         # Will just use pretrained weights and run on images
@@ -161,7 +162,7 @@ if __name__ == "__main__":
             opt_gen,
             config.LEARNING_RATE,
         )
-        plot_examples("data/lr/", gen)
+        plot_examples("data_single/lr/", gen)
     else:
         # This will train from scratch
         main()
