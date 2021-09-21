@@ -88,7 +88,7 @@ def main():
         dataset,
         batch_size=config.BATCH_SIZE,
         shuffle=True,
-        pin_memory=True,
+        pin_memory=False,
         num_workers=config.NUM_WORKERS,
     )
     gen = Generator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
@@ -145,12 +145,12 @@ def main():
         )
 
         print("{0}/{1}".format(epoch,config.NUM_EPOCHS))
-        if epoch % 50 == 0:
+        if epoch % 100 == 0:
             if config.SAVE_MODEL:
                 save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
                 save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
         if config.SAVE_IMG_CHKPNT:
-            if epoch % 10 == 0:
+            if epoch % 50 == 0:
                 plot_examples("data/lr/", gen, 'checkpoints/'+str(epoch)+'/')
 
     wandb.finish()
