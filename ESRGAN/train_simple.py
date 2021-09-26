@@ -83,7 +83,7 @@ def train_fn(
 
 
 def main():
-    dataset = MyImageFolder(root_dir="data/")
+    dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
     loader = DataLoader(
         dataset,
         batch_size=config.BATCH_SIZE,
@@ -151,7 +151,7 @@ def main():
                 save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
         if config.SAVE_IMG_CHKPNT:
             if epoch % 50 == 0:
-                plot_examples("data/lr/", gen, 'checkpoints/'+str(epoch)+'/')
+                plot_examples(config.TRAIN_FOLDER + "lr/", gen, 'checkpoints/'+str(epoch)+'/')
 
     wandb.finish()
 
@@ -170,7 +170,7 @@ if __name__ == "__main__":
             opt_gen,
             config.LEARNING_RATE,
         )
-        plot_examples("data/lr/", gen, 'upscaled/')
+        plot_examples(config.TRAIN_FOLDER + "lr/", gen, 'upscaled/')
     else:
         # This will train from scratch
         main()
