@@ -1,8 +1,5 @@
-import torch
 import os, glob
 import numpy as np
-from PIL import Image
-import random
 
 source = "dataset/"
 target = "data/"
@@ -25,9 +22,7 @@ for res in ['lr', 'hr']:
         sample = np.load(file)
         dim = int(np.sqrt(len(sample)))
         matrix_image = sample.reshape(dim, dim)
-        matrix_image = np.uint8(matrix_image*255)
-        img = Image.fromarray(matrix_image, mode='L')
-        img.save(target + res +
-                file.replace(npy_folder, '').replace('.npy', '.png'))
+        np.save(target + res +
+                file.replace(npy_folder, ''), matrix_image)
 
 os.system("rm -fr -- numpy_data")

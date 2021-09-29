@@ -53,21 +53,20 @@ def load_checkpoint(checkpoint_file, model, optimizer, lr):
 
 def plot_examples(low_res_folder, gen, target_folder):
     files = os.listdir(low_res_folder)
-
+    os.system(f"mkdir -p {target_folder}")
     gen.eval()
     for file in files:
-        path_test = os.path.join("data/lr/", file)
+        path_test = os.path.join(config.TRAIN_FOLDER+"lr/", file)
 
         # Upscaling 1 channel to 3 channels: our images are in gray scale.
-        test_image = cv2.imread(path_test)
-        test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2GRAY if config.IMG_CHANNELS==1 else cv2.COLOR_BGR2RGB)
+        test_array = np.load(path_test)
+        test_matrix = test_array.reshape(config.LOW_RES, config.LOW_RES)
 
         with torch.no_grad():
-            upscaled_img = gen(
-                config.transform(image=np.asarray(test_image))["image"]
+            upscaled = gen(
+                config.transform(image=test_matrix)
                 .unsqueeze(0)
                 .to(config.DEVICE)
             )
-        os.system(f"mkdir -p {target_folder}")
-        save_image(upscaled_img, target_folder + file)
+        np.save(target_folder + file, upscaled)
     gen.train()

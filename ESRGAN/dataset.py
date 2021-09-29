@@ -1,13 +1,9 @@
 import torch
-from tqdm import tqdm
-import time
 import torch.nn
 import os
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import config
-from PIL import Image
-import cv2
 
 
 class MyImageFolder(Dataset):
@@ -23,20 +19,20 @@ class MyImageFolder(Dataset):
         file_name = self.image_file_name[index]
 
         root_and_lr = os.path.join(self.root_dir, "lr")
-        low_res = cv2.imread(os.path.join(root_and_lr, file_name))
-        low_res = cv2.cvtColor(low_res, cv2.COLOR_BGR2GRAY if config.IMG_CHANNELS==1 else cv2.COLOR_BGR2RGB)
-        low_res = config.transform(image=low_res)["image"]
+        lr_array = np.load(root_and_lr)
+        lr_matrix = lr_array.reshape(config.LOW_RES, config.LOW_RES)
+        lr_matrix = config.transform(lr_matrix)
 
         root_and_hr = os.path.join(self.root_dir, "hr")
-        high_res = cv2.imread(os.path.join(root_and_hr, file_name))
-        high_res = cv2.cvtColor(high_res, cv2.COLOR_BGR2GRAY if config.IMG_CHANNELS==1 else cv2.COLOR_BGR2RGB)
-        high_res = config.transform(image=high_res)["image"]
+        hr_array = np.load(root_and_hr)
+        hr_matrix = hr_array.reshape(config.HIGH_RES, config.HIGH_RES)
+        hr_matrix = config.transform(hr_matrix)
 
-        return low_res, high_res
+        return lr_matrix, hr_matrix
 
 
 def test():
-    dataset = MyImageFolder(root_dir="data/")
+    dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
     loader = DataLoader(dataset, batch_size=8)
 
     for low_res, high_res in loader:
