@@ -64,8 +64,7 @@ def plot_examples(low_res_folder, gen, target_folder):
 
         with torch.no_grad():
             upscaled = gen(
-                config.transform(image=test_matrix)
-                .unsqueeze(0)
+                config.transform(test_matrix)
                 .to(config.DEVICE)
             )
         np.save(target_folder + file, upscaled)

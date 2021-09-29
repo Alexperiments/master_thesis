@@ -1,11 +1,9 @@
 import torch
-from PIL import Image
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
+import numpy as np
 
 LOAD_MODEL = False
-SAVE_MODEL = True
-SAVE_IMG_CHKPNT = True
+SAVE_MODEL = False
+SAVE_IMG_CHKPNT = False
 CHECKPOINT_GEN = "gen.pth.tar"
 CHECKPOINT_DISC = "disc.pth.tar"
 TRAIN_FOLDER = 'data/'
@@ -20,9 +18,7 @@ HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
 IMG_CHANNELS = 1
 
-transform = A.Compose(
-    [
-        A.Normalize(mean=[0 for _ in range(IMG_CHANNELS)], std=[1 for _ in range(IMG_CHANNELS)]),
-        ToTensorV2(),
-    ]
-)
+def transform(array, mean=0, std=1):
+    max = np.max(array)
+    normalized = (array - mean*max)/(std*max)
+    return torch.from_numpy(normalized).unsqueeze(0)

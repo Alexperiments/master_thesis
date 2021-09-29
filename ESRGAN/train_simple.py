@@ -7,7 +7,6 @@ from torch.utils.data import DataLoader
 from model import Generator, Discriminator, initialize_weights
 from tqdm import tqdm
 from dataset import MyImageFolder
-from torch.utils.tensorboard import SummaryWriter
 from loss import bright_loss
 import wandb
 
@@ -23,7 +22,6 @@ def train_fn(
     brightness_loss,
     g_scaler,
     d_scaler,
-    writer,
     tb_step,
 ):
     loop = tqdm(loader, leave=True)
@@ -66,7 +64,6 @@ def train_fn(
         g_scaler.step(opt_gen)
         g_scaler.update()
 
-        writer.add_scalar("Critic loss", loss_critic.item(), global_step=tb_step)
         tb_step += 1
 
         if idx % 100 == 0 and idx > 0:
@@ -96,7 +93,6 @@ def main():
     initialize_weights(gen)
     opt_gen = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE, betas=(0.0, 0.9))
     opt_disc = optim.Adam(disc.parameters(), lr=config.LEARNING_RATE, betas=(0.0, 0.9))
-    writer = SummaryWriter("logs")
     tb_step = 0
     l1 = nn.L1Loss()
     gen.train()
@@ -140,7 +136,6 @@ def main():
             brightness_loss,
             g_scaler,
             d_scaler,
-            writer,
             tb_step,
         )
 
