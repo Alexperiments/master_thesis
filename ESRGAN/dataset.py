@@ -19,12 +19,12 @@ class MyImageFolder(Dataset):
         file_name = self.image_file_name[index]
 
         root_and_lr = os.path.join(self.root_dir, "lr")
-        lr_array = np.load(root_and_lr)
+        lr_array = np.load(os.path.join(root_and_lr, file_name))
         lr_matrix = lr_array.reshape(config.LOW_RES, config.LOW_RES)
         lr_matrix = config.transform(lr_matrix)
 
         root_and_hr = os.path.join(self.root_dir, "hr")
-        hr_array = np.load(root_and_hr)
+        hr_array = np.load(os.path.join(root_and_hr, file_name))
         hr_matrix = hr_array.reshape(config.HIGH_RES, config.HIGH_RES)
         hr_matrix = config.transform(hr_matrix)
 
