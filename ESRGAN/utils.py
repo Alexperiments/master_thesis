@@ -56,17 +56,15 @@ def plot_examples(low_res_folder, gen, target_folder):
     os.system(f"mkdir -p {target_folder}")
     gen.eval()
     for file in files:
-        path_test = os.path.join(config.TRAIN_FOLDER+"lr/", file)
-
-        # Upscaling 1 channel to 3 channels: our images are in gray scale.
+        path_test = os.path.join(config.TEST_FOLDER+"lr/", file)
         test_array = np.load(path_test)
-        test_matrix = test_array.reshape(config.LOW_RES, config.LOW_RES)
 
         with torch.no_grad():
             upscaled = gen(
-                config.transform(test_matrix)
-                .unsqueeze(0)
+                config.transform(test_array)
                 .to(config.DEVICE)
             )
-        np.save(target_folder + file, upscaled)
+        int_upscaled = np.uint8(upscaled*255)
+        upscaled_img = Image.fromarray(int_upscaled, mode='L')
+        save_image(upscaled_img, target_folder + file)
     gen.train()
