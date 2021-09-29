@@ -2,7 +2,7 @@ import torch
 import os
 import config
 import numpy as np
-from PIL import Image
+import cv2
 from torchvision.utils import save_image
 
 
@@ -51,22 +51,23 @@ def load_checkpoint(checkpoint_file, model, optimizer, lr):
         param_group["lr"] = lr
 
 
-def plot_examples(low_res_folder, gen):
+def plot_examples(low_res_folder, gen, target_folder):
     files = os.listdir(low_res_folder)
 
     gen.eval()
     for file in files:
-        image = Image.open("data/lr/" + file)
+        path_test = os.path.join("data/lr/", file)
 
         # Upscaling 1 channel to 3 channels: our images are in gray scale.
-        rgbimg = Image.new("RGB", image.size)
-        rgbimg.paste(image)
+        test_image = cv2.imread(path_test)
+        test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2GRAY if config.IMG_CHANNELS==1 else cv2.COLOR_BGR2RGB)
 
         with torch.no_grad():
             upscaled_img = gen(
-                config.test_transform(image=np.asarray(rgbimg))["image"]
+                config.transform(image=np.asarray(test_image))["image"]
                 .unsqueeze(0)
                 .to(config.DEVICE)
             )
-        save_image(upscaled_img, f"upscaled/{file}")
+        os.system(f"mkdir -p {target_folder}")
+        save_image(upscaled_img, target_folder + file)
     gen.train()

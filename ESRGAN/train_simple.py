@@ -8,6 +8,7 @@ from model import Generator, Discriminator, initialize_weights
 from tqdm import tqdm
 from dataset import MyImageFolder
 from torch.utils.tensorboard import SummaryWriter
+from loss import bright_loss
 import wandb
 
 torch.backends.cudnn.benchmark = True
@@ -19,6 +20,7 @@ def train_fn(
     opt_gen,
     opt_disc,
     l1,
+    brightness_loss,
     g_scaler,
     d_scaler,
     writer,
@@ -47,14 +49,15 @@ def train_fn(
 
         # Train Generator: min log(1 - D(G(z))) <-> max log(D(G(z))
         with torch.cuda.amp.autocast():
-            l1_loss = 1e-2 * l1(fake, high_res)
-            adversarial_loss = 5e-3 * -torch.mean(disc(fake))
-            gen_loss = l1_loss + adversarial_loss
+            l1_loss = 5 * l1(fake, high_res)
+            adversarial_loss = 0.1 * -torch.mean(disc(fake))
+            br_loss = 1e-3 * brightness_loss(fake, high_res)
+            gen_loss = l1_loss + adversarial_loss + br_loss
 
         wandb.log(
             {
-                "l1_loss": l1_loss, "adversarial_loss": adversarial_loss,
-                'loss_critic':loss_critic, 'Gen loss':gen_loss
+                "l1_loss": l1_loss, "adversarial_loss": adversarial_loss, 'brightness_loss': br_loss,
+                'gradient_penalty':gp, 'loss_critic':loss_critic, 'Gen loss':gen_loss,
             }
         )
 
@@ -80,12 +83,12 @@ def train_fn(
 
 
 def main():
-    dataset = MyImageFolder(root_dir="data/")
+    dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
     loader = DataLoader(
         dataset,
         batch_size=config.BATCH_SIZE,
         shuffle=True,
-        pin_memory=True,
+        pin_memory=False,
         num_workers=config.NUM_WORKERS,
     )
     gen = Generator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
@@ -98,6 +101,7 @@ def main():
     l1 = nn.L1Loss()
     gen.train()
     disc.train()
+    brightness_loss = bright_loss()
 
     g_scaler = torch.cuda.amp.GradScaler()
     d_scaler = torch.cuda.amp.GradScaler()
@@ -125,7 +129,7 @@ def main():
         }
     )
 
-    for epoch in range(config.NUM_EPOCHS):
+    for epoch in range(config.NUM_EPOCHS+1):
         tb_step = train_fn(
             loader,
             disc,
@@ -133,16 +137,21 @@ def main():
             opt_gen,
             opt_disc,
             l1,
+            brightness_loss,
             g_scaler,
             d_scaler,
             writer,
             tb_step,
         )
 
-        if epoch % 50 == 0:
+        print("{0}/{1}".format(epoch,config.NUM_EPOCHS))
+        if epoch % 100 == 0:
             if config.SAVE_MODEL:
                 save_checkpoint(gen, opt_gen, filename=config.CHECKPOINT_GEN)
                 save_checkpoint(disc, opt_disc, filename=config.CHECKPOINT_DISC)
+        if config.SAVE_IMG_CHKPNT:
+            if epoch % 50 == 0:
+                plot_examples(config.TRAIN_FOLDER + "lr/", gen, 'checkpoints/'+str(epoch)+'/')
 
     wandb.finish()
 
@@ -161,7 +170,7 @@ if __name__ == "__main__":
             opt_gen,
             config.LEARNING_RATE,
         )
-        plot_examples("data/lr/", gen)
+        plot_examples(config.TRAIN_FOLDER + "lr/", gen, 'upscaled/')
     else:
         # This will train from scratch
         main()

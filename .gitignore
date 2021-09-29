@@ -7,3 +7,5 @@
 *.zip
 **/wandb/
 **/data_single/
+**/checkpoints/
+**/test/
