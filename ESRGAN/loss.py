@@ -19,6 +19,7 @@ class VGGLoss(nn.Module):
         vgg_target_features = self.vgg(target)
         return self.loss(vgg_input_features, vgg_target_features)
 
+
 class bright_loss(nn.Module):
     def __init__(self):
         super().__init__()

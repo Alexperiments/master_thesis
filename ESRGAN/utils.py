@@ -67,6 +67,22 @@ def plot_examples(low_res_folder, gen, target_folder):
                 .to(config.DEVICE)
             )
         upscaled_2d = upscaled.squeeze(0).squeeze(0)
-        int_upscaled = np.uint8(upscaled_2d*255)
+        int_upscaled = np.uint8(upscaled_2d.cpu()*255)
         cv2.imwrite(target_folder + file + ".png", int_upscaled)
     gen.train()
+
+
+def preferred_batch_size(gpu_memory_Mb):
+    # Run these to know the size of the parameters and the tensors involved
+    #gen = Generator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
+    #summary(gen, (1,20,20))
+
+    #disc = Discriminator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
+    #summary(disc, (1,80,80))
+
+    params_size = 64 + 90
+    for_back_size = 162 + 23
+    batch_size = (gpu_memory_Mb - params_size)/(for_back_size)
+    # round to the
+    batch_pow_2 = np.uint(2**np.uint(np.log2(batch_size)))
+    print(f"On the current gpu the best batch size is: {batch_pow_2}")

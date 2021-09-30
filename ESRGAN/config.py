@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-LOAD_MODEL = True
+LOAD_MODEL = False
 SAVE_MODEL = True
 SAVE_IMG_CHKPNT = False
 CHECKPOINT_GEN = "gen.pth.tar"
@@ -11,7 +11,7 @@ TEST_FOLDER = 'data/'
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LEARNING_RATE = 1e-4
 NUM_EPOCHS = 1000
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 LAMBDA_GP = 10
 NUM_WORKERS = 2
 HIGH_RES = 80
