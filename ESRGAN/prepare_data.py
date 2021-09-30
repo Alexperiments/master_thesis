@@ -1,28 +1,55 @@
 import os, glob
 import numpy as np
+import random
 
 source = "dataset/"
-target = "data/"
+temp = "temp_folder/"
+train = "train_data/"
+test = "test_data/"
 
-os.system("mkdir -p numpy_data/ numpy_data/lr numpy_data/hr")
-os.system("mkdir -p "+target+" "+target+"lr/ "+target+"hr/")
-os.system("mv "+source+"*_20.npy numpy_data/lr/")
-os.system("mv "+source+"*_80.npy numpy_data/hr/")
-os.system("rm -f -- numpy_data/lr/grid_20.npy")
-os.system("rm -f -- numpy_data/hr/grid_80.npy")
-os.system("rename 's/_20//' numpy_data/lr/*.npy")
-os.system("rename 's/_80//' numpy_data/hr/*.npy")
-os.system("rm -fr -- "+source)
+os.system(f"mkdir -p {temp} {temp}lr {temp}hr")
+os.system(f"mkdir -p {train} {train}lr/ {train}hr/")
+os.system(f"mkdir -p {test} {test}lr/ {test}hr/")
+os.system(f"cp {source}*_20.npy {temp}lr/")
+os.system(f"cp {source}*_80.npy {temp}hr/")
+os.system(f"rm -f -- {temp}lr/grid_20.npy")
+os.system(f"rm -f -- {temp}hr/grid_80.npy")
+os.system(f"rename 's/_20//' {temp}lr/*.npy")
+os.system(f"rename 's/_80//' {temp}hr/*.npy")
+#os.system("rm -fr -- "+source)
 
-for res in ['lr', 'hr']:
-    npy_folder = 'numpy_data/' + res
-    files = glob.glob(os.path.join(npy_folder, "*.npy"))
+try:
+    npy_folder = temp + 'lr/'
+    files = os.listdir(npy_folder)
+    random.shuffle(files)
+    len_files = len(files)
+    train_size = int(len_files*0.8)
 
-    for i, file in enumerate(files):
-        sample = np.load(file)
-        dim = int(np.sqrt(len(sample)))
-        matrix_image = sample.reshape(dim, dim)
-        np.save(target + res +
-                file.replace(npy_folder, ''), matrix_image)
 
-os.system("rm -fr -- numpy_data")
+    for res in ['lr/', 'hr/']:
+        for file in files[:train_size]:
+            sample = np.load(temp + res + file)
+            dim = int(np.sqrt(len(sample)))
+            matrix_image = sample.reshape(dim, dim)
+            np.save(
+                train + res + file,
+                matrix_image
+            )
+
+        for file in files[train_size:]:
+            sample = np.load(temp + res + file)
+            dim = int(np.sqrt(len(sample)))
+            matrix_image = sample.reshape(dim, dim)
+            np.save(
+                test + res + file,
+                matrix_image
+            )
+
+except:
+    os.system("rm -fr -- "+train)
+    os.system("rm -fr -- "+test)
+    os.system("rm -fr -- "+temp)
+    raise
+
+os.system(f"rm -fr -- {temp}")
+os.system(f"rm -fr -- {source}")

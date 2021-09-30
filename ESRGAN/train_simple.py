@@ -152,7 +152,7 @@ def main():
 
 
 if __name__ == "__main__":
-    try_model = True
+    try_model = False
 
     if try_model:
         gen = Generator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
