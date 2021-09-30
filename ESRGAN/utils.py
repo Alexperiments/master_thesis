@@ -3,6 +3,7 @@ import os
 import config
 import numpy as np
 import cv2
+from PIL import Image
 from torchvision.utils import save_image
 
 
@@ -62,9 +63,10 @@ def plot_examples(low_res_folder, gen, target_folder):
         with torch.no_grad():
             upscaled = gen(
                 config.transform(test_array)
+                .unsqueeze(0)
                 .to(config.DEVICE)
             )
-        int_upscaled = np.uint8(upscaled*255)
-        upscaled_img = Image.fromarray(int_upscaled, mode='L')
-        save_image(upscaled_img, target_folder + file)
+        upscaled_2d = upscaled.squeeze(0).squeeze(0)
+        int_upscaled = np.uint8(upscaled_2d*255)
+        cv2.imwrite(target_folder + file + ".png", int_upscaled)
     gen.train()

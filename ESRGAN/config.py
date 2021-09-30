@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 
-LOAD_MODEL = False
-SAVE_MODEL = False
+LOAD_MODEL = True
+SAVE_MODEL = True
 SAVE_IMG_CHKPNT = False
 CHECKPOINT_GEN = "gen.pth.tar"
 CHECKPOINT_DISC = "disc.pth.tar"

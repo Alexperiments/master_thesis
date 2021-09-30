@@ -152,11 +152,9 @@ def main():
 
 
 if __name__ == "__main__":
-    try_model = False
+    try_model = True
 
     if try_model:
-        # Will just use pretrained weights and run on images
-        # in test_images/ and save the ones to SR in saved/
         gen = Generator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
         opt_gen = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE, betas=(0.0, 0.9))
         load_checkpoint(

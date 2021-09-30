@@ -20,18 +20,18 @@ class MyImageFolder(Dataset):
 
         root_and_lr = os.path.join(self.root_dir, "lr")
         lr_array = np.load(os.path.join(root_and_lr, file_name))
-        lr_matrix = config.transform(lr_matrix)
+        lr_matrix = config.transform(lr_array)
 
         root_and_hr = os.path.join(self.root_dir, "hr")
         hr_array = np.load(os.path.join(root_and_hr, file_name))
-        hr_matrix = config.transform(hr_matrix)
+        hr_matrix = config.transform(hr_array)
 
         return lr_matrix, hr_matrix
 
 
 def test():
     dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
-    loader = DataLoader(dataset, batch_size=16)
+    loader = DataLoader(dataset, batch_size=64)
 
     for low_res, high_res in loader:
         print(low_res.shape)
