@@ -49,6 +49,7 @@ Dove viene definito il Residual Scaling with Adaptive weights (RSA)?
 	in Wang et al. ("Lightweight Image Super-Resolution with Adaptive Weighted Learning Network"). Se
 	questo fosse il caso Reduction = Conv-1 + ReLU, Expansion = Conv-1. E il RSA è semplicemente la
 	struttura dei pesi.
+	La struttura della RU l'ho copiata da altri paper... ma non è detto sia quella giusta!
 
 Cos'è il fusion layer?
 	Penso sia il punto in cui concatenano le due residual units e applicano un conv layer, che quindi
@@ -60,9 +61,6 @@ Come si condividono i pesi tra gli ARFB blocks?
 Scaled dot-product:
 	softmax( (Q * K)/sqrt(embedding size) ) * V
 
-Come si trainano i learnable weights nel ARFB?
-
-Leak factor nel ReLU?
 
 Adam optimizer betas?
 

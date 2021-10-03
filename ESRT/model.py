@@ -3,11 +3,6 @@ from torch import nn
 import time
 from torchsummary import summary
 
-# parametri da determinare
-leak_factor = 0.2
-lambda_x = 0.25
-lambda_res = 0.25
-
 
 class CA(nn.Module):
     '''Channel attention'''
@@ -21,36 +16,29 @@ class CA(nn.Module):
 
 class RU(nn.Module):
     '''Adaptive weight Residual Unit'''
-    def __init__(self, in_channels):
+    def __init__(self, in_channels, lambda_x, lambda_res):
         super().__init__()
-        self.reduction = nn.Conv2d(
-            in_channels=in_channels,
-            out_channels=in_channels//2,
-            kernel_size=1,
-        )
-        self.act = nn.LeakyReLU(leak_factor)
-        self.expansion = nn.Conv2d(
-            in_channels=in_channels//2,
-            out_channels=in_channels,
-            kernel_size=1,
-        )
+        self.lambda_x = lambda_x
+        self.lambda_res =lambda_res
+        self.reduction = nn.Conv2d(in_channels, in_channels//2, kernel_size=1)
+        self.act = nn.LeakyReLU()
+        self.expansion = nn.Conv2d(in_channels//2, in_channels, kernel_size=1)
 
     def forward(self, x):
         residual = self.expansion(self.act(self.reduction(x)))
-        return lambda_x*x + lambda_res*residual
+        return self.lambda_x*x + self.lambda_res*residual
 
 
 class ARFB(nn.Module):
     '''Adaptive residual feature block'''
     def __init__(self, in_channels, ):
         super().__init__()
-        self.ru1 = RU(in_channels)
-        self.ru2 = RU(in_channels)
-        self.conv1 = nn.Conv2d(
-            in_channels*2,
-            in_channels*2,
-            kernel_size=1,
-        )
+        self.lambda_x = nn.Parameter(torch.tensor(1.))
+        self.lambda_res = nn.Parameter(torch.tensor(1.))
+
+        self.ru1 = RU(in_channels, self.lambda_x, self.lambda_res)
+        self.ru2 = RU(in_channels, self.lambda_x, self.lambda_res)
+        self.conv1 = nn.Conv2d(in_channels*2, in_channels*2, kernel_size=1)
         self.conv3 = nn.Conv2d(
             in_channels*2,
             in_channels,
@@ -64,7 +52,8 @@ class ARFB(nn.Module):
         cat = torch.cat([first_ru, second_ru], dim=1)
         cat = self.conv1(cat)
         cat = self.conv3(cat)
-        return lambda_x*x + lambda_res*cat
+        print(self.lambda_x, self.lambda_res)
+        return self.lambda_x*x + self.lambda_res*cat
 
 
 class HFM(nn.Module):
@@ -255,7 +244,6 @@ class ETSR(nn.Module):
         )
 
     def forward(self, x):
-        print(x.type())
         initial = self.conv1(x)
         main_way = self.lcb(initial)
         main_way = self.ltb(main_way)
