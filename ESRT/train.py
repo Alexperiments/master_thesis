@@ -39,7 +39,7 @@ def train_fn(loader, etsr, opt, l1, scaler):
             super_res = etsr(low_res)
             l1_loss = l1(super_res, high_res)
 
-        #wandb.log({"L1 loss": l1_loss, "LR": config.LEARNING_RATE})
+        wandb.log({"L1 loss": l1_loss, "LR": config.LEARNING_RATE})
 
         opt.zero_grad()
         scaler.scale(l1_loss).backward()
@@ -72,7 +72,7 @@ def main():
             config.LEARNING_RATE,
         )
 
-    #wandb_init()
+    wandb_init()
 
     for epoch in range(1, config.NUM_EPOCHS):
         train_fn(loader, etsr, opt, l1, scaler)
@@ -85,7 +85,7 @@ def main():
         if config.LR_DECAY:
             decay_lr(epoch)
 
-    #wandb.finish()
+    wandb.finish()
 
 
 if __name__ == "__main__":
