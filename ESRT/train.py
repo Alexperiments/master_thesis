@@ -79,11 +79,11 @@ def main():
         train_fn(loader, etsr, opt, l1, scaler)
         print("{0}/{1}".format(epoch,config.NUM_EPOCHS))
 
-        if epoch % 1000 == 0:
+        if epoch % 100 == 0:
             if config.SAVE_MODEL:
                 save_checkpoint(etsr, opt, filename=config.CHECKPOINT_GEN)
         if config.SAVE_IMG_CHKPNT:
-            if epoch % 1000 == 0:
+            if epoch % 100 == 0:
                 plot_examples(config.TRAIN_FOLDER + "lr/", etsr, 'checkpoints/'+str(epoch)+'/')
         if config.LR_DECAY:
             decay_lr(epoch)
