@@ -4,6 +4,18 @@ import time
 from torchsummary import summary
 
 
+class ConvBlock(nn.Module):
+    '''Same in-out convolution2d-activation block'''
+    def __init__(self, in_channels, out_channels, k_size):
+        super().__init__()
+        padding = (k_size-1)//2
+        self.conv = nn.Conv2d(in_channels, out_channels, k_size, padding=padding)
+        self.act = nn.LeakyReLU()
+
+    def forward(self, x):
+        return self.act(self.conv(x))
+
+
 class CA(nn.Module):
     '''Channel attention'''
     def __init__(self):
@@ -20,12 +32,11 @@ class RU(nn.Module):
         super().__init__()
         self.lambda_x = lambda_x
         self.lambda_res =lambda_res
-        self.reduction = nn.Conv2d(in_channels, in_channels//2, kernel_size=1)
-        self.act = nn.LeakyReLU()
-        self.expansion = nn.Conv2d(in_channels//2, in_channels, kernel_size=1)
+        self.reduction = ConvBlock(in_channels, in_channels//2, kernel_size=1)
+        self.expansion = ConvBlock(in_channels//2, in_channels, kernel_size=1)
 
     def forward(self, x):
-        residual = self.expansion(self.act(self.reduction(x)))
+        residual = self.expansion(self.reduction(x))
         return self.lambda_x*x + self.lambda_res*residual
 
 
@@ -38,13 +49,8 @@ class ARFB(nn.Module):
 
         self.ru1 = RU(in_channels, self.lambda_x, self.lambda_res)
         self.ru2 = RU(in_channels, self.lambda_x, self.lambda_res)
-        self.conv1 = nn.Conv2d(in_channels*2, in_channels*2, kernel_size=1)
-        self.conv3 = nn.Conv2d(
-            in_channels*2,
-            in_channels,
-            kernel_size=3,
-            padding=1
-        )
+        self.conv1 = ConvBlock(in_channels*2, in_channels*2, kernel_size=1)
+        self.conv3 = ConvBlock(in_channels*2, in_channels, kernel_size=3)
 
     def forward(self, x):
         first_ru = self.ru1(x)
@@ -52,7 +58,6 @@ class ARFB(nn.Module):
         cat = torch.cat([first_ru, second_ru], dim=1)
         cat = self.conv1(cat)
         cat = self.conv3(cat)
-        print(self.lambda_x, self.lambda_res)
         return self.lambda_x*x + self.lambda_res*cat
 
 
@@ -137,7 +142,7 @@ class HPB(nn.Module):
             align_corners=False
         )
         self.arfb2 = ARFB(in_channels)
-        self.conv1 = nn.Conv2d(in_channels*2, in_channels, kernel_size=1)
+        self.conv1 = ConvBlock(in_channels*2, in_channels, kernel_size=1)
         self.ca = CA()
         self.arfb3 = ARFB(in_channels)
 
@@ -215,33 +220,13 @@ class ETSR(nn.Module):
     '''Efficient transformer super-resolution'''
     def __init__(self, in_channels=1, out_channels=32, low_res=20, scale=4):
         super().__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1
-        )
+        self.conv1 = ConvBlock(in_channels, out_channels, kernel_size=3)
         self.lcb = LCB(out_channels)
         self.ltb = LTB(out_channels, low_res)
-        self.conv2 = nn.Conv2d(
-            out_channels,
-            out_channels,
-            kernel_size=3,
-            padding=1
-        )
+        self.conv2 = ConvBlock(out_channels, out_channels, kernel_size=3)
         self.shuffle = nn.PixelShuffle(upscale_factor=scale)
-        self.conv3 = nn.Conv2d(
-            out_channels//(scale*scale),
-            in_channels,
-            kernel_size=3,
-            padding=1
-        )
-        self.conv4 = nn.Conv2d(
-            out_channels//(scale*scale),
-            in_channels,
-            kernel_size=3,
-            padding=1
-        )
+        self.conv3 = ConvBlock(out_channels//(scale*scale), in_channels, kernel_size=3)
+        self.conv4 = ConvBlock(out_channels//(scale*scale), in_channels, kernel_size=3)
 
     def forward(self, x):
         initial = self.conv1(x)

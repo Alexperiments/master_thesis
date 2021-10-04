@@ -1,6 +1,8 @@
 import torch
 import config
 import cv2
+import os
+import numpy as np
 
 
 def save_checkpoint(model, optimizer, filename="my_checkpoint.pth.tar"):
@@ -42,4 +44,4 @@ def plot_examples(low_res_folder, model, target_folder):
         upscaled_2d = upscaled.squeeze(0).squeeze(0)
         int_upscaled = np.uint8(upscaled_2d.cpu()*255)
         cv2.imwrite(target_folder + file + ".png", int_upscaled)
-    gen.train()
+    model.train()
