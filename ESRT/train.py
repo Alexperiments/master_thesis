@@ -40,6 +40,7 @@ def train_fn(loader, etsr, opt, l1, scaler):
             l1_loss = l1(super_res, high_res)
 
         wandb.log({"L1 loss": l1_loss, "LR": config.LEARNING_RATE})
+        loop.set_postfix(L1=l1_loss.item())
 
         opt.zero_grad()
         scaler.scale(l1_loss).backward()
@@ -57,7 +58,7 @@ def main():
     )
     etsr = ETSR(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
     initialize_weights(etsr)
-    opt = optim.Adam(etsr.parameters(), lr=config.LEARNING_RATE)
+    opt = optim.Adam(etsr.parameters(), lr=config.LEARNING_RATE, betas=(0.9, 0.9))
     l1 = nn.L1Loss()
 
     etsr.train()
@@ -74,14 +75,16 @@ def main():
 
     wandb_init()
 
-    for epoch in range(1, config.NUM_EPOCHS):
+    for epoch in range(1, config.NUM_EPOCHS+1):
         train_fn(loader, etsr, opt, l1, scaler)
         print("{0}/{1}".format(epoch,config.NUM_EPOCHS))
 
-        if epoch % 100 == 0:
+        if epoch % 1000 == 0:
             if config.SAVE_MODEL:
                 save_checkpoint(etsr, opt, filename=config.CHECKPOINT_GEN)
-
+        if config.SAVE_IMG_CHKPNT:
+            if epoch % 1000 == 0:
+                plot_examples(config.TRAIN_FOLDER + "lr/", etsr, 'checkpoints/'+str(epoch)+'/')
         if config.LR_DECAY:
             decay_lr(epoch)
 
@@ -92,8 +95,8 @@ if __name__ == "__main__":
     try_model = False
 
     if try_model:
-        etsr = ETSR(in_channels=config.IMG_CHANNELS)
-        opt = optim.Adam(gen.parameters(), lr=config.LEARNING_RATE)
+        etsr = ETSR(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
+        opt = optim.Adam(etsr.parameters(), lr=config.LEARNING_RATE, betas=(0.9, 0.9))
         plot_examples(config.TRAIN_FOLDER + "lr/", etsr, 'upscaled/')
 
     else:
