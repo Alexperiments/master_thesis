@@ -58,7 +58,7 @@ def main():
     )
     etsr = ETSR(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
     initialize_weights(etsr)
-    opt = optim.Adam(etsr.parameters(), lr=config.LEARNING_RATE, betas=(0.9, 0.9))
+    opt = optim.Adam(etsr.parameters(), lr=config.LEARNING_RATE, betas=(0.8, 0.809))
     l1 = nn.L1Loss()
 
     etsr.train()
@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     if try_model:
         etsr = ETSR(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
-        opt = optim.Adam(etsr.parameters(), lr=config.LEARNING_RATE, betas=(0.9, 0.9))
+        opt = optim.Adam(etsr.parameters(), lr=config.LEARNING_RATE, betas=(0.8, 0.809))
         plot_examples(config.TRAIN_FOLDER + "lr/", etsr, 'upscaled/')
 
     else:
