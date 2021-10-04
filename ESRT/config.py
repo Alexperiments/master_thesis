@@ -4,8 +4,7 @@ import numpy as np
 LOAD_MODEL = False
 SAVE_MODEL = True
 SAVE_IMG_CHKPNT = True
-CHECKPOINT_GEN = "gen.pth.tar"
-CHECKPOINT_DISC = "disc.pth.tar"
+CHECKPOINT = "esrt.pth.tar"
 TRAIN_FOLDER = 'train_data/'
 TEST_FOLDER = 'test_data/' 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
