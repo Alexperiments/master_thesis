@@ -6,10 +6,10 @@ from torchsummary import summary
 
 class ConvBlock(nn.Module):
     '''Same in-out convolution2d-activation block'''
-    def __init__(self, in_channels, out_channels, k_size):
+    def __init__(self, in_channels, out_channels, kernel_size):
         super().__init__()
-        padding = (k_size-1)//2
-        self.conv = nn.Conv2d(in_channels, out_channels, k_size, padding=padding)
+        padding = (kernel_size-1)//2
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding)
         self.act = nn.LeakyReLU()
 
     def forward(self, x):
