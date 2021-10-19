@@ -62,6 +62,24 @@ class FSRCNN(nn.Module):
         return self.deconv(mid)
 
 
+class FFCNN(nn.Module):
+    def __init__(self, in_features=4, in_channels=1, low_res=20):
+        super().__init__()
+        self.fc1 = nn.Linear(in_features, low_res)
+        self.act1 = nn.ReLU()
+        self.fc2 = nn.Linear(low_res, low_res*low_res)
+        self.act2 = nn.ReLU()
+        self.fsrcnn = FSRCNN()
+        self.in_c = in_channels
+        self.lr = low_res
+
+    def forward(self, x):
+        initial = self.act2(self.fc2(self.act1(self.fc1(x.float()))))
+        reshape = initial.view(-1, self.in_c, self.lr, self.lr)
+        image = self.fsrcnn(reshape)
+        return image
+
+
 def initialize_weights(model):
     for m in model.modules():
         if isinstance(m, nn.Conv2d):
@@ -74,14 +92,13 @@ def initialize_weights(model):
             nn.init.kaiming_normal_(m.weight.data)
 
 def main():
-    in_channels = 1
+    in_features = 4
     batch_size = 64
-    res = 20
 
-    fsrcnn = FSRCNN()
+    ffcnn = FFCNN()
 
-    x = torch.randn((batch_size, in_channels, res, res))
-    out = fsrcnn(x)
+    x = torch.randn((batch_size, in_features))
+    out = ffcnn(x)
     print(out.shape)
 
 if __name__ == '__main__':
