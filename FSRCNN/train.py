@@ -76,7 +76,7 @@ def main():
         batch_size=config.BATCH_SIZE,
         num_workers=config.NUM_WORKERS
     )
-    model = FSRCNN(maps=10).to(config.DEVICE)
+    model = FSRCNN(maps=4).to(config.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
         model.parameters(),

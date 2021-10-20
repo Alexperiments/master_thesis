@@ -69,7 +69,7 @@ def main(config):
     )
     model = FSRCNN(in_channels=cfg.IMG_CHANNELS, maps=config['hidden']).to(cfg.DEVICE)
     initialize_weights(model)
-    opt = optim.Adam(model.parameters(), lr=config['lr'], betas=(config['beta1'], config['beta2']))
+    opt = optim.Adam(model.parameters(), lr=config['lr'])
     loss = nn.L1Loss()
 
     model.train()
@@ -107,17 +107,17 @@ if __name__ == "__main__":
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
         stop={
-            "training_iteration": 100
+            "training_iteration": 1000
         },
         resources_per_trial={
             "cpu": 2,
             "gpu": 1  # set this for GPUs
         },
-        num_samples=8,
+        num_samples=16,
         config={
             "lr": tune.loguniform(1e-5, 4e-3),
             "hidden": 4,
-            "batch_size": tune.choice([32, 64, 128, 256]),
+            "batch_size": 32,
             # wandb config
             "wandb":{
                 "entity": 'aled',
