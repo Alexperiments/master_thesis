@@ -74,15 +74,29 @@ def initialize_weights(model):
             nn.init.kaiming_normal_(m.weight.data)
 
 def main():
+    from torchsummary import summary
+    import config
+    import numpy as np
+
     in_channels = 1
     batch_size = 64
     res = 20
 
-    fsrcnn = FSRCNN()
+    fsrcnn = FSRCNN(maps=10).to(config.DEVICE)
 
-    x = torch.randn((batch_size, in_channels, res, res))
+    x = torch.randn((batch_size, in_channels, res, res)).to(config.DEVICE)
     out = fsrcnn(x)
     print(out.shape)
+
+    summary(fsrcnn, (1, 20, 20))
+    params_size = 0.08
+    for_back_size = 2.28
+    gpu_memory_Mb = 1750
+    batch_size = (gpu_memory_Mb - params_size)/(for_back_size)
+    # round to the
+    batch_pow_2 = np.uint(2**np.uint(np.log2(batch_size)))
+    print(f"On the current gpu the best batch size is: {batch_pow_2}")
+
 
 if __name__ == '__main__':
     main()

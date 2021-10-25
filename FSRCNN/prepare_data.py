@@ -4,8 +4,10 @@ import random
 
 source = "dataset/"
 target = "train_data/"
+test = 'test_data/'
 
 os.system(f"mkdir -p {target} {target}lr {target}hr")
+os.system(f"mkdir -p {test} {test}lr {test}hr")
 os.system(f"cp {source}parameters.txt {target}")
 
 for res, pix in zip(['lr', 'hr'], ['20', '80']):

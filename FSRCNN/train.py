@@ -3,7 +3,7 @@ import config
 from torch import nn
 from torch import optim
 from utils import load_checkpoint, save_checkpoint, plot_examples, plot_difference
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from model import FSRCNN, initialize_weights
 from tqdm import tqdm
@@ -63,22 +63,22 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
     scheduler.step(sum(losses)/len(losses))
 
 def main():
-    train_dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
+    dataset = MyImageFolder()
+    train_dataset, val_dataset = random_split(dataset, [8000, 2000])
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.BATCH_SIZE,
         shuffle=True,
         num_workers=config.NUM_WORKERS
     )
-    '''val_dataset = MyImageFolder(root_dir=config.TEST_FOLDER)
     val_loader = DataLoader(
         val_dataset,
         batch_size=config.BATCH_SIZE,
         num_workers=config.NUM_WORKERS
-    )'''
+    )
     val_dataset = train_dataset
     val_loader = train_loader
-    model = FSRCNN(maps=10).to(config.DEVICE)
+    model = FSRCNN(maps=4).to(config.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
         model.parameters(),
@@ -123,10 +123,10 @@ def main():
 
 
 if __name__ == "__main__":
-    try_model = True
+    try_model = False
 
     if try_model:
-        model = FSRCNN(maps=10).to(config.DEVICE)
+        model = FSRCNN(maps=4).to(config.DEVICE)
         opt = optim.Adam(
             model.parameters(),
             lr=config.LEARNING_RATE,

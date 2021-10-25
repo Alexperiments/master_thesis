@@ -7,9 +7,9 @@ import config
 
 
 class MyImageFolder(Dataset):
-    def __init__(self, root_dir):
+    def __init__(self):
         super(MyImageFolder, self).__init__()
-        self.root_dir = root_dir
+        self.root_dir = config.TRAIN_FOLDER
         self.image_files_name = sorted(os.listdir(os.path.join(self.root_dir, 'hr')))
 
     def __len__(self):
@@ -32,7 +32,7 @@ class MyImageFolder(Dataset):
 
 
 def test():
-    dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
+    dataset = MyImageFolder()
     loader = DataLoader(dataset, batch_size=config.BATCH_SIZE)
 
     for low_res, high_res in loader:
