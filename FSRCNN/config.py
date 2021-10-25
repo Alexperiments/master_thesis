@@ -3,21 +3,25 @@ import numpy as np
 
 LOAD_MODEL = False
 SAVE_MODEL = True
-SAVE_IMG_CHKPNT = True
+SAVE_IMG_CHKPNT = False
 CHECKPOINT = "fsrcnn.pth.tar"
-TRAIN_FOLDER = 'train_data/'
+TRAIN_FOLDER = 'single_data/'#'train_data/'
 TEST_FOLDER = 'test_data/'
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-LEARNING_RATE =  0.000158967
+LEARNING_RATE =  0.0003#0.000158967
 LR_DECAY = True
-NUM_EPOCHS = 4000
-BATCH_SIZE = 32
+NUM_EPOCHS = 1000
+BATCH_SIZE = 64
 NUM_WORKERS = 2
 HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
 IMG_CHANNELS = 1
 
-def transform(array, mean=0, std=1):
-    max = np.max(array)
-    normalized = (array - mean*max)/(std*max)
-    return torch.from_numpy(normalized).unsqueeze(0)
+def transform(array, min, max, size):
+    norm = (array-min)/(max-min)
+    matrix = norm.reshape(size, size)
+    return torch.from_numpy(matrix).unsqueeze(0)
+
+def reverse_transform(norm, min, max):
+    array = norm*(max-min) + min
+    return array.squeeze(0).squeeze(0)

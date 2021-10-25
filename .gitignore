@@ -1,11 +1,13 @@
 **train_data/
 **test_data/
+**dataset/
 **data/
 **/__pycache__/
 **/logs/
 *pth.tar
 *.ipynb
 **/upscaled/
+**/differences/
 *.zip
 **/wandb/
 **/data_single/
