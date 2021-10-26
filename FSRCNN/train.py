@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, random_split, Subset
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from model import FSRCNN, initialize_weights
 from tqdm import tqdm
-from dataset import MyImageFolder
+from dataset import MyImageFolder, MultiEpochsDataLoader
 import wandb
 import numpy as np
 import time
@@ -47,7 +47,7 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
         opt.zero_grad()
         second = time.time()
         print(f"step time: {second - first}")
-
+    print(f"tot time: {time.time() - start}")
     '''st_eval = time.time()
     with torch.no_grad():
         model.eval()
@@ -66,10 +66,10 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
 def main():
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [8000, 2000])
-    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,2047))
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,10))
+    #train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,2047))
+    #val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,10))
 
-    train_loader = DataLoader(
+    '''train_loader = DataLoader(
         train_dataset,
         batch_size=config.BATCH_SIZE,
         shuffle=True,
@@ -81,9 +81,22 @@ def main():
         batch_size=config.BATCH_SIZE,
         num_workers=config.NUM_WORKERS,
         pin_memory=True
+    )'''
+
+    train_loader = MultiEpochsDataLoader(
+        train_dataset,
+        batch_size=config.BATCH_SIZE,
+        shuffle=True,
+        num_workers=config.NUM_WORKERS,
+        pin_memory=True
     )
-    val_dataset = train_dataset
-    val_loader = train_loader
+    val_loader = MultiEpochsDataLoader(
+        val_dataset,
+        batch_size=config.BATCH_SIZE,
+        num_workers=config.NUM_WORKERS,
+        pin_memory=True
+    )
+
     model = FSRCNN(maps=4).to(config.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
