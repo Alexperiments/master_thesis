@@ -27,28 +27,22 @@ def wandb_init():
 
 
 def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
-    start = time.time()
     loop = tqdm(train_loader, leave=True)
     losses = []
     for idx, (low_res, high_res) in enumerate(loop):
-        first = time.time()
-        if idx == 0:
-            print(f"load time: {first - start}")
         high_res = high_res.to(config.DEVICE)
         low_res = low_res.to(config.DEVICE)
         with torch.cuda.amp.autocast():
             super_res = model(low_res)
             loss = l1(super_res, high_res)
-        #wandb.log({"L1 train loss": loss, "LR": config.LEARNING_RATE})
+        wandb.log({"L1 train loss": loss, "LR": config.LEARNING_RATE})
         loop.set_postfix(L1=loss.item())
         losses.append(loss)
         loss.backward()
         opt.step()
         opt.zero_grad()
         second = time.time()
-        print(f"step time: {second - first}")
-    print(f"tot time: {time.time() - start}")
-    '''st_eval = time.time()
+    '''
     with torch.no_grad():
         model.eval()
         val_loss = []
@@ -60,35 +54,23 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
             val_loss.append(l1(super_res, high_res).item())
         #wandb.log({"L1 val loss": np.mean(val_loss)})
         model.train()
-    print(f"eval time: {time.time()-st_eval}")'''
+    '''
     scheduler.step(sum(losses)/len(losses))
+
 
 def main():
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [8000, 2000])
-    #train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,2047))
-    #val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,10))
-
-    '''train_loader = DataLoader(
-        train_dataset,
-        batch_size=config.BATCH_SIZE,
-        shuffle=True,
-        num_workers=config.NUM_WORKERS,
-        pin_memory=True
-    )
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=config.BATCH_SIZE,
-        num_workers=config.NUM_WORKERS,
-        pin_memory=True
-    )'''
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,2048))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,10))
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,
         batch_size=config.BATCH_SIZE,
         shuffle=True,
         num_workers=config.NUM_WORKERS,
-        pin_memory=True
+        pin_memory=True,
+        drop_last=True
     )
     val_loader = MultiEpochsDataLoader(
         val_dataset,
@@ -102,7 +84,6 @@ def main():
     opt = optim.Adam(
         model.parameters(),
         lr=config.LEARNING_RATE,
-        #betas=(0.9714, 0.9897)
     )
     scheduler = ReduceLROnPlateau(
         opt,
@@ -125,7 +106,7 @@ def main():
             config.LEARNING_RATE,
         )
 
-    #wandb_init()
+    wandb_init()
 
     for epoch in range(1, config.NUM_EPOCHS+1):
         train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler)
@@ -138,7 +119,7 @@ def main():
             if epoch % 100 == 0:
                 plot_examples(config.TEST_FOLDER + "lr/", model, 'checkpoints/'+str(epoch)+'/')
 
-    #wandb.finish()
+    wandb.finish()
 
 
 if __name__ == "__main__":
@@ -149,7 +130,6 @@ if __name__ == "__main__":
         opt = optim.Adam(
             model.parameters(),
             lr=config.LEARNING_RATE,
-            #betas=(0.9714, 0.9897)
         )
         load_checkpoint(
             config.CHECKPOINT,
