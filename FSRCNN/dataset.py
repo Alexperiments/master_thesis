@@ -1,8 +1,6 @@
-import torch
-import torch.nn
-import os
-from torch.utils.data import Dataset, DataLoader
 import numpy as np
+from torch.utils.data import Dataset, DataLoader
+
 import config
 
 

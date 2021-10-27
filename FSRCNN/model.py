@@ -40,13 +40,6 @@ class FSRCNN(nn.Module):
             out_channels=56,
             kernel_size=1
         )
-        '''self.deconv = ConvBlock(
-            in_channels=56,
-            out_channels=1,
-            kernel_size=9,
-            stride=scaling,
-            padding=34
-        )'''
         self.deconv = nn.ConvTranspose2d(
             in_channels=56,
             out_channels=1,

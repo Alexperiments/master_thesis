@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 LOAD_MODEL = False
 SAVE_MODEL = True
@@ -9,7 +8,6 @@ TRAIN_FOLDER = 'train_data/'
 TEST_FOLDER = 'test_data/'
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LEARNING_RATE = 0.0025#0.000158967
-LR_DECAY = True
 NUM_EPOCHS = 4000
 BATCH_SIZE = 512
 NUM_WORKERS = 4

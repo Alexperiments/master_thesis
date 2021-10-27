@@ -1,16 +1,17 @@
 import torch
-import config
 from torch import nn
 from torch import optim
-from utils import load_checkpoint, save_checkpoint, plot_examples, plot_difference
-from torch.utils.data import DataLoader, random_split, Subset
+from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from model import FSRCNN, initialize_weights
-from tqdm import tqdm
-from dataset import MyImageFolder, MultiEpochsDataLoader
+
 import wandb
 import numpy as np
-import time
+from tqdm import tqdm
+
+import config
+from model import FSRCNN, initialize_weights
+from dataset import MyImageFolder, MultiEpochsDataLoader
+from utils import load_checkpoint, save_checkpoint, plot_examples, plot_difference
 
 
 def wandb_init():
@@ -41,7 +42,6 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
         loss.backward()
         opt.step()
         opt.zero_grad()
-        second = time.time()
 
     with torch.no_grad():
         model.eval()
@@ -118,29 +118,4 @@ def main():
 
 
 if __name__ == "__main__":
-    try_model = False
-
-    if try_model:
-        model = FSRCNN(maps=10).to(config.DEVICE)
-        opt = optim.Adam(
-            model.parameters(),
-            lr=config.LEARNING_RATE,
-        )
-        scheduler = ReduceLROnPlateau(
-            opt,
-            'min',
-            factor=0.5,
-            patience=10,
-            verbose=True
-        )
-        load_checkpoint(
-            config.CHECKPOINT,
-            model,
-            opt,
-            scheduler
-        )
-        #plot_examples(config.TEST_FOLDER + "lr/", model, 'upscaled/')
-        plot_difference(config.TRAIN_FOLDER, model, 'differences/')
-
-    else:
-        main()
+    main()
