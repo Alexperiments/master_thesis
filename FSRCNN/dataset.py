@@ -20,8 +20,8 @@ class MyImageFolder(Dataset):
 
         root_and_hr = os.path.join(self.root_dir, "hr")
         hr_array = np.load(os.path.join(root_and_hr, file_name))
-        minn = min(hr_array)
-        maxx = max(hr_array)
+        minn = hr_array.min()
+        maxx = hr_array.max()
         hr_matrix = config.transform(hr_array, minn, maxx, config.HIGH_RES)
 
         root_and_lr = os.path.join(self.root_dir, "lr")
@@ -61,12 +61,13 @@ class _RepeatSampler(object):
 
 
 def test():
-    dataset = MyImageFolder()
+    dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
     loader = DataLoader(dataset, batch_size=config.BATCH_SIZE)
 
     for low_res, high_res in loader:
         print(low_res.shape)
         print(high_res.shape)
+
 
 if __name__ == "__main__":
     test()

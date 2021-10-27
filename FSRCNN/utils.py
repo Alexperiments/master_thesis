@@ -6,33 +6,30 @@ import os
 import numpy as np
 
 
-def save_checkpoint(model, optimizer, filename="my_checkpoint.pth.tar"):
+def save_checkpoint(model, optimizer, scheduler, filename="my_checkpoint.pth.tar"):
     print("=> Saving checkpoint")
     checkpoint = {
         "state_dict": model.state_dict(),
         "optimizer": optimizer.state_dict(),
+        "scheduler": scheduler.state_dict(),
     }
     torch.save(checkpoint, filename)
 
 
-def load_checkpoint(checkpoint_file, model, optimizer, lr):
+def load_checkpoint(checkpoint_file, model, optimizer, scheduler):
     print("=> Loading checkpoint")
     checkpoint = torch.load(checkpoint_file, map_location=config.DEVICE)
     # model.load_state_dict(checkpoint)
     model.load_state_dict(checkpoint["state_dict"])
     optimizer.load_state_dict(checkpoint["optimizer"])
-
-    # If we don't do this then it will just have learning rate of old checkpoint
-    # and it will lead to many hours of debugging \:
-    for param_group in optimizer.param_groups:
-        param_group["lr"] = lr
+    scheduler.load_state_dict(checkpoint["scheduler"])
 
 
 def plot_examples(low_res_folder, model, target_folder):
     files = os.listdir(low_res_folder)
     os.system(f"mkdir -p {target_folder}")
     model.eval()
-    for file in files:
+    for file in files[:20]:
         path_test = os.path.join(low_res_folder, file)
         test_array = np.load(path_test)
 
@@ -47,13 +44,14 @@ def plot_examples(low_res_folder, model, target_folder):
         cv2.imwrite(target_folder + file + ".png", int_upscaled)
     model.train()
 
+
 def plot_difference(source, model, target):
     lr_folder = os.path.join(source, 'lr')
     hr_folder = os.path.join(source, 'hr')
     files = os.listdir(lr_folder)
     os.system(f"mkdir -p {target}")
     model.eval()
-    for file in files:
+    for file in files[:100]:
         path_lr = os.path.join(lr_folder, file)
         lr = np.load(path_lr)
 
@@ -80,4 +78,5 @@ def plot_difference(source, model, target):
             im = axs[i].imshow(matrix, cmap='hot', vmin=minn, vmax=maxx)
             plt.colorbar(im, ax=axs[i])
         plt.savefig(f"{target}{file}.png", dpi=300)
+        plt.close(fig)
     model.train()
