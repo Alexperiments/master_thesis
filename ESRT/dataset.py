@@ -31,7 +31,7 @@ class MyImageFolder(Dataset):
 
 def test():
     dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
-    loader = DataLoader(dataset, batch_size=64)
+    loader = DataLoader(dataset, batch_size=config.BATCH_SIZE)
 
     for low_res, high_res in loader:
         print(low_res.shape)

@@ -3,6 +3,7 @@ import os
 import config
 import numpy as np
 import cv2
+from PIL import Image
 from torchvision.utils import save_image
 
 
@@ -53,21 +54,35 @@ def load_checkpoint(checkpoint_file, model, optimizer, lr):
 
 def plot_examples(low_res_folder, gen, target_folder):
     files = os.listdir(low_res_folder)
-
+    os.system(f"mkdir -p {target_folder}")
     gen.eval()
     for file in files:
-        path_test = os.path.join("data/lr/", file)
-
-        # Upscaling 1 channel to 3 channels: our images are in gray scale.
-        test_image = cv2.imread(path_test)
-        test_image = cv2.cvtColor(test_image, cv2.COLOR_BGR2GRAY if config.IMG_CHANNELS==1 else cv2.COLOR_BGR2RGB)
+        path_test = os.path.join(config.TEST_FOLDER+"lr/", file)
+        test_array = np.load(path_test)
 
         with torch.no_grad():
-            upscaled_img = gen(
-                config.transform(image=np.asarray(test_image))["image"]
+            upscaled = gen(
+                config.transform(test_array)
                 .unsqueeze(0)
                 .to(config.DEVICE)
             )
-        os.system(f"mkdir -p {target_folder}")
-        save_image(upscaled_img, target_folder + file)
+        upscaled_2d = upscaled.squeeze(0).squeeze(0)
+        int_upscaled = np.uint8(upscaled_2d.cpu()*255)
+        cv2.imwrite(target_folder + file + ".png", int_upscaled)
     gen.train()
+
+
+def preferred_batch_size(gpu_memory_Mb):
+    # Run these to know the size of the parameters and the tensors involved
+    #gen = Generator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
+    #summary(gen, (1,20,20))
+
+    #disc = Discriminator(in_channels=config.IMG_CHANNELS).to(config.DEVICE)
+    #summary(disc, (1,80,80))
+
+    params_size = 64 + 90
+    for_back_size = 162 + 23
+    batch_size = (gpu_memory_Mb - params_size)/(for_back_size)
+    # round to the
+    batch_pow_2 = np.uint(2**np.uint(np.log2(batch_size)))
+    print(f"On the current gpu the best batch size is: {batch_pow_2}")

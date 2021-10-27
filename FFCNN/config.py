@@ -3,16 +3,14 @@ import numpy as np
 
 LOAD_MODEL = False
 SAVE_MODEL = True
-SAVE_IMG_CHKPNT = False
-CHECKPOINT_GEN = "gen.pth.tar"
-CHECKPOINT_DISC = "disc.pth.tar"
+SAVE_IMG_CHKPNT = True
+CHECKPOINT = "fsrcnn.pth.tar"
 TRAIN_FOLDER = 'train_data/'
 TEST_FOLDER = 'test_data/'
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-LEARNING_RATE = 1e-4
-NUM_EPOCHS = 1000
+LEARNING_RATE =  0.002#0.000158967
+NUM_EPOCHS = 2000
 BATCH_SIZE = 32
-LAMBDA_GP = 10
 NUM_WORKERS = 2
 HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
