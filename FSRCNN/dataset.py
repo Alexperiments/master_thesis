@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 
@@ -16,15 +17,15 @@ class MyImageFolder(Dataset):
     def __getitem__(self, index):
         file_name = self.image_files_name[index]
 
-        root_and_hr = os.path.join(self.root_dir, "hr")
-        hr_array = np.load(os.path.join(root_and_hr, file_name))
-        minn = hr_array.min()
-        maxx = hr_array.max()
-        hr_matrix = config.transform(hr_array, minn, maxx)
-
         root_and_lr = os.path.join(self.root_dir, "lr")
         lr_array = np.load(os.path.join(root_and_lr, file_name))
+        minn = lr_array.min()
+        maxx = lr_array.max()
         lr_matrix = config.transform(lr_array, minn, maxx)
+
+        root_and_hr = os.path.join(self.root_dir, "hr")
+        hr_array = np.load(os.path.join(root_and_hr, file_name))
+        hr_matrix = config.transform(hr_array, minn, maxx)
 
         return lr_matrix, hr_matrix
 

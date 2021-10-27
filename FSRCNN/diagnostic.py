@@ -26,8 +26,9 @@ def plot_difference(source, model, target, num_samples=30):
 
         path_hr = os.path.join(hr_folder, file)
         hr = np.load(path_hr)
-        minn = hr.min()
-        maxx = hr.max()
+
+        minn = lr.min()
+        maxx = lr.max()
 
         with torch.no_grad():
             sr = model(
@@ -41,8 +42,8 @@ def plot_difference(source, model, target, num_samples=30):
         fig, axs = plt.subplots(1, 3, figsize=(12, 3))
         for i, matrix in enumerate([hr, sr, diff]):
             if i == 2:
-                minn = -0.05#diff.min()
-                maxx = 0.05#diff.max()
+                minn = -0.05
+                maxx = 0.05
             im = axs[i].imshow(matrix, cmap='hot', vmin=minn, vmax=maxx)
             plt.colorbar(im, ax=axs[i])
         axs[0].title.set_text('HR')
@@ -69,15 +70,15 @@ def check_distribution(source, model, target, num_samples=1000):
         lr_file = np.load(lr_file_path)
         lr.append(torch.from_numpy(lr_file))
 
-    lr_input = torch.stack(lr).to(config.DEVICE)
+    lr = torch.stack(lr).to(config.DEVICE)
     hr = torch.stack(hr).to(config.DEVICE)
 
-    min, _ = torch.min(hr.view(num_samples, 6400), dim=1)
-    max, _ = torch.max(hr.view(num_samples, 6400), dim=1)
+    min, _ = torch.min(lr.view(num_samples, 400), dim=1)
+    max, _ = torch.max(lr.view(num_samples, 400), dim=1)
     minn = min.unsqueeze(1).unsqueeze(1).expand(num_samples, 20, 20)
     maxx = max.unsqueeze(1).unsqueeze(1).expand(num_samples, 20, 20)
     delta = torch.sub(maxx, minn)
-    sub_lr = torch.sub(lr_input, minn)
+    sub_lr = torch.sub(lr, minn)
     norm_lr = torch.div(sub_lr, delta)
 
     norm_lr = norm_lr.unsqueeze(1)
@@ -126,4 +127,4 @@ load_checkpoint(
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
 plot_difference(config.TRAIN_FOLDER, model, 'differences/')
-#check_distribution(config.TRAIN_FOLDER, model, 'distributions/')
+check_distribution(config.TRAIN_FOLDER, model, 'distributions/')

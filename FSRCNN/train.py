@@ -11,7 +11,7 @@ from tqdm import tqdm
 import config
 from model import FSRCNN, initialize_weights
 from dataset import MyImageFolder, MultiEpochsDataLoader
-from utils import load_checkpoint, save_checkpoint, plot_examples, plot_difference
+from utils import load_checkpoint, save_checkpoint, plot_examples
 
 
 def wandb_init():
