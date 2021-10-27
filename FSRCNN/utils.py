@@ -25,23 +25,30 @@ def load_checkpoint(checkpoint_file, model, optimizer, scheduler):
     scheduler.load_state_dict(checkpoint["scheduler"])
 
 
-def plot_examples(low_res_folder, model, target_folder):
-    files = os.listdir(low_res_folder)
+def plot_examples(source, model, target_folder):
+    lr_folder = os.path.join(source, 'lr')
+    hr_folder = os.path.join(source, 'hr')
+    files = os.listdir(lr_folder)
     os.system(f"mkdir -p {target_folder}")
     model.eval()
     for file in files[:20]:
-        path_test = os.path.join(low_res_folder, file)
-        test_array = np.load(path_test)
+        lr_path = os.path.join(lr_folder, file)
+        hr_path = os.path.join(hr_folder, file)
+        lr = np.load(lr_path)
+        hr = np.load(hr_path)
+
+        minn = hr.min()
+        maxx = hr.max()
 
         with torch.no_grad():
-            upscaled = model(
-                config.transform(test_array)
+            sr = model(
+                config.transform(lr, minn, maxx)
                 .unsqueeze(0)
                 .to(config.DEVICE)
             )
-        upscaled_2d = upscaled.squeeze(0).squeeze(0)
-        int_upscaled = np.uint8(upscaled_2d.cpu()*255)
-        cv2.imwrite(target_folder + file + ".png", int_upscaled)
+        sr = config.reverse_transform(sr, minn, maxx)
+        int_sr = np.uint8(sr.cpu()*255)
+        cv2.imwrite(target_folder + file + ".png", int_sr)
     model.train()
 
 
@@ -57,17 +64,16 @@ def plot_difference(source, model, target):
 
         path_hr = os.path.join(hr_folder, file)
         hr = np.load(path_hr)
-        minn = min(hr)
-        maxx = max(hr)
+        minn = hr.min()
+        maxx = hr.max()
 
         with torch.no_grad():
             sr = model(
-                config.transform(lr, minn, maxx, config.LOW_RES)
+                config.transform(lr, minn, maxx)
                 .unsqueeze(0)
                 .to(config.DEVICE)
             ).cpu()
         sr = config.reverse_transform(sr, minn, maxx)
-        hr = hr.reshape(config.HIGH_RES, config.HIGH_RES)
         diff = sr-hr
 
         fig, axs = plt.subplots(1, 3, figsize=(12, 3))

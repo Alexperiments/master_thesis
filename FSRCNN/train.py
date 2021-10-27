@@ -103,7 +103,6 @@ def main():
         )
 
     wandb_init()
-
     for epoch in range(1, config.NUM_EPOCHS+1):
         train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler)
         print("{0}/{1}".format(epoch,config.NUM_EPOCHS))
@@ -113,7 +112,7 @@ def main():
                 save_checkpoint(model, opt, scheduler, filename=config.CHECKPOINT)
         if config.SAVE_IMG_CHKPNT:
             if epoch % 100 == 0:
-                plot_examples(config.TRAIN_FOLDER + "lr/", model, 'checkpoints/'+str(epoch)+'/')
+                plot_examples(config.TRAIN_FOLDER, model, 'checkpoints/'+str(epoch)+'/')
 
     wandb.finish()
 

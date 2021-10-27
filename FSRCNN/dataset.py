@@ -22,11 +22,11 @@ class MyImageFolder(Dataset):
         hr_array = np.load(os.path.join(root_and_hr, file_name))
         minn = hr_array.min()
         maxx = hr_array.max()
-        hr_matrix = config.transform(hr_array, minn, maxx, config.HIGH_RES)
+        hr_matrix = config.transform(hr_array, minn, maxx)
 
         root_and_lr = os.path.join(self.root_dir, "lr")
         lr_array = np.load(os.path.join(root_and_lr, file_name))
-        lr_matrix = config.transform(lr_array, minn, maxx, config.LOW_RES)
+        lr_matrix = config.transform(lr_array, minn, maxx)
 
         return lr_matrix, hr_matrix
 
