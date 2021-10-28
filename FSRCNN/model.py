@@ -40,19 +40,43 @@ class FSRCNN(nn.Module):
             out_channels=56,
             kernel_size=1
         )
-        self.deconv = nn.ConvTranspose2d(
+        '''self.deconv = nn.ConvTranspose2d(
             in_channels=56,
             out_channels=1,
             kernel_size=9,
             stride=scaling,
             padding=3,
             output_padding=1
+        )'''
+        self.deconv1 = nn.ConvTranspose2d(
+            in_channels=56,
+            out_channels=12,
+            kernel_size=9,
+            stride=scaling//2,
+            padding=4,
+            output_padding=1
+        )
+        self.deconv2 = nn.ConvTranspose2d(
+            in_channels=12,
+            out_channels=4,
+            kernel_size=9,
+            stride=scaling//2,
+            padding=4,
+            output_padding=1
+        )
+        self.conv = ConvBlock(
+            in_channels=4,
+            out_channels=1,
+            kernel_size=3,
+            padding=1,
+            stride=1
         )
 
     def forward(self, x):
         first = self.extract(x)
         mid = self.expand(self.map(self.shrink(first)))
-        return self.deconv(mid)
+        return self.conv(self.deconv2(self.deconv1(mid)))
+        #return self.deconv1(mid)
 
 
 def initialize_weights(model):

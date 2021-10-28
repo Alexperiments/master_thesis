@@ -60,7 +60,7 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
 
 def main():
     dataset = MyImageFolder()
-    train_dataset, val_dataset = random_split(dataset, [9500, 500])
+    train_dataset, val_dataset = random_split(dataset, [9216, 784])
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,

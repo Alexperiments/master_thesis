@@ -5,7 +5,9 @@ from torch.utils.data import DataLoader, Sampler
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import os
+import random
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 import config
@@ -18,6 +20,7 @@ def plot_difference(source, model, target, num_samples=30):
     lr_folder = os.path.join(source, 'lr')
     hr_folder = os.path.join(source, 'hr')
     files = os.listdir(lr_folder)
+    random.shuffle(files)
     os.system(f"mkdir -p {target}")
     model.eval()
     for file in files[:num_samples]:
@@ -60,7 +63,9 @@ def check_distribution(source, model, target, num_samples=1000):
     hr = []
     lr_path = os.path.join(source, 'lr')
     hr_path = os.path.join(source, 'hr')
-    for file in os.listdir(lr_path)[:num_samples]:
+    files = os.listdir(lr_path)
+    random.shuffle(files)
+    for file in files[:num_samples]:
         lr_file_path = os.path.join(lr_path, file)
         hr_file_path = os.path.join(hr_path, file)
 
@@ -106,6 +111,12 @@ def check_distribution(source, model, target, num_samples=1000):
     plt.savefig(f"{target}std_difference.png", dpi=300)
 
 
+def check_parameters():
+    df = pd.read_csv(config.TRAIN_FOLDER + "parameters.txt", sep='\t')
+    df.plot.scatter(' log10Mb ', ' log10Rb ', s=0.5, color='black')
+    plt.show()
+
+
 model = FSRCNN(maps=10).to(config.DEVICE)
 opt = optim.Adam(
     model.parameters(),
@@ -126,5 +137,6 @@ load_checkpoint(
 )
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
-plot_difference(config.TRAIN_FOLDER, model, 'differences/')
-check_distribution(config.TRAIN_FOLDER, model, 'distributions/')
+#plot_difference(config.TRAIN_FOLDER, model, 'differences/')
+#check_distribution(config.TRAIN_FOLDER, model, 'distributions/')
+check_parameters()
