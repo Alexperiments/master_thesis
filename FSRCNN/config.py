@@ -8,12 +8,15 @@ TRAIN_FOLDER = 'train_data/'
 TEST_FOLDER = 'test_data/'
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 LEARNING_RATE = 0.0025#0.000158967
-NUM_EPOCHS = 4000
+NUM_EPOCHS = 1000
 BATCH_SIZE = 512
 NUM_WORKERS = 4
 HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
 IMG_CHANNELS = 1
+
+NORM_MAX = 0.16
+NORM_MIN = -0.003
 
 def transform(array, min, max):
     norm = (array-min)/(max-min)

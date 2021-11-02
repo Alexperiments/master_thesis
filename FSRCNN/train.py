@@ -23,14 +23,15 @@ def wandb_init():
             "Learning Rate": config.LEARNING_RATE,
             "Batch Size": config.BATCH_SIZE,
             "Max Epochs": config.NUM_EPOCHS,
-        }
+        },
+        settings=wandb.Settings(start_method='fork')
     )
 
 
 def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
     loop = tqdm(train_loader, leave=True)
     losses = []
-    for idx, (low_res, high_res) in enumerate(loop):
+    for low_res, high_res in loop:
         high_res = high_res.to(config.DEVICE)
         low_res = low_res.to(config.DEVICE)
         with torch.cuda.amp.autocast():
@@ -61,6 +62,8 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
 def main():
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [9216, 784])
+    #train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,1152))
+    #val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,100))
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,

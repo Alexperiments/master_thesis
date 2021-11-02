@@ -12,71 +12,64 @@ class ConvBlock(nn.Module):
 
 
 class FSRCNN(nn.Module):
-    def __init__(self, scaling=4, in_channels=1, maps=4):
+    def __init__(
+        self,
+        scaling=4,
+        in_channels=1,
+        outer_channels=30,
+        inner_channels=10,
+        maps=4
+    ):
         super().__init__()
         self.extract = ConvBlock(
             in_channels,
-            out_channels=56,
+            out_channels=outer_channels,
             kernel_size=5,
             padding=2,
             stride=1
         )
         self.shrink = ConvBlock(
-            in_channels=56,
-            out_channels=12,
+            in_channels=outer_channels,
+            out_channels=inner_channels,
             kernel_size=1
         )
         self.map = nn.Sequential(
             *[ConvBlock(
-                in_channels=12,
-                out_channels=12,
+                in_channels=inner_channels,
+                out_channels=inner_channels,
                 kernel_size=3,
                 padding=1,
                 stride=1
             ) for _ in range(maps)]
         )
         self.expand = ConvBlock(
-            in_channels=12,
-            out_channels=56,
+            in_channels=inner_channels,
+            out_channels=outer_channels,
             kernel_size=1
         )
-        '''self.deconv = nn.ConvTranspose2d(
-            in_channels=56,
-            out_channels=1,
-            kernel_size=9,
-            stride=scaling,
-            padding=3,
-            output_padding=1
-        )'''
         self.deconv1 = nn.ConvTranspose2d(
-            in_channels=56,
-            out_channels=12,
+            in_channels=outer_channels,
+            out_channels=2*inner_channels,
             kernel_size=9,
-            stride=scaling//2,
+            stride=2,
             padding=4,
-            output_padding=1
+            output_padding=1,
+            dilation=1
         )
         self.deconv2 = nn.ConvTranspose2d(
-            in_channels=12,
-            out_channels=4,
-            kernel_size=9,
-            stride=scaling//2,
-            padding=4,
-            output_padding=1
-        )
-        self.conv = ConvBlock(
-            in_channels=4,
+            in_channels=2*inner_channels,
             out_channels=1,
-            kernel_size=3,
-            padding=1,
-            stride=1
+            kernel_size=9,
+            stride=2,
+            padding=4,
+            output_padding=1,
+            dilation=1
         )
 
     def forward(self, x):
         first = self.extract(x)
         mid = self.expand(self.map(self.shrink(first)))
-        return self.conv(self.deconv2(self.deconv1(mid)))
-        #return self.deconv1(mid)
+        return self.deconv2(self.deconv1(mid))
 
 
 def initialize_weights(model):
@@ -84,11 +77,9 @@ def initialize_weights(model):
         if isinstance(m, nn.Conv2d):
             nn.init.kaiming_normal_(m.weight.data)
 
-        elif isinstance(m, nn.Linear):
-            nn.init.kaiming_normal_(m.weight.data)
+        #elif isinstance(m, nn.ConvTranspose2d):
+        #    nn.init.kaiming_normal_(m.weight.data)
 
-        elif isinstance(m, nn.Conv1d):
-            nn.init.kaiming_normal_(m.weight.data)
 
 def main():
     from torchsummary import summary
@@ -96,7 +87,7 @@ def main():
     import numpy as np
 
     in_channels = 1
-    batch_size = 64
+    batch_size = 512
     res = 20
 
     fsrcnn = FSRCNN(maps=10).to(config.DEVICE)
@@ -106,8 +97,8 @@ def main():
     print(out.shape)
 
     summary(fsrcnn, (1, 20, 20))
-    params_size = 0.08
-    for_back_size = 2.28
+    params_size = 0.23
+    for_back_size = 1.85
     gpu_memory_Mb = 1750
     batch_size = (gpu_memory_Mb - params_size)/(for_back_size)
     # round to the

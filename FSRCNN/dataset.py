@@ -19,8 +19,8 @@ class MyImageFolder(Dataset):
 
         root_and_lr = os.path.join(self.root_dir, "lr")
         lr_array = np.load(os.path.join(root_and_lr, file_name))
-        minn = lr_array.min()
-        maxx = lr_array.max()
+        minn = lr_array.min() + config.NORM_MIN
+        maxx = lr_array.max() + config.NORM_MAX
         lr_matrix = config.transform(lr_array, minn, maxx)
 
         root_and_hr = os.path.join(self.root_dir, "hr")

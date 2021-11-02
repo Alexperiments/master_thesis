@@ -8,7 +8,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-'''import config
+import config
 from model import FSRCNN
 from dataset import MyImageFolder
 from utils import load_checkpoint, plot_examples
@@ -34,7 +34,7 @@ load_checkpoint(
 )
 model.eval()
 
-test_image = np.load("train_data/lr/3543.npy")
+test_image = np.load("train_data/lr/3549.npy")
 min = test_image.min()
 max = test_image.max()
 test_image = config.transform(test_image, min, max)
@@ -42,13 +42,10 @@ test_image = test_image.to(config.DEVICE).unsqueeze(0)
 
 out = model(test_image).detach().cpu().numpy().squeeze(0)
 
-fig, axs = plt.subplots(2, 2, figsize=(24, 12), sharex=True, sharey=True)
+fig, axs = plt.subplots(3, 4, figsize=(24, 12), sharex=True, sharey=True)
 
 for idx, ax in enumerate(axs.flatten()):
     ax.imshow(out[idx, :, :], cmap='hot')
 
 plt.tight_layout()
-plt.show()'''
-
-test = np.load("train_data/lr/0.npy")
-print(test.shape)
+plt.show()
