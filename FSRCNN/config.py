@@ -15,8 +15,8 @@ HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
 IMG_CHANNELS = 1
 
-NORM_MAX = 0.16
-NORM_MIN = -0.003
+NORM_MAX = 0.95
+NORM_MIN = -0.02
 
 def transform(array, min, max):
     norm = (array-min)/(max-min)

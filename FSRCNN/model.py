@@ -49,7 +49,7 @@ class FSRCNN(nn.Module):
         )
         self.deconv1 = nn.ConvTranspose2d(
             in_channels=outer_channels,
-            out_channels=2*inner_channels,
+            out_channels=20,
             kernel_size=9,
             stride=2,
             padding=4,
@@ -57,7 +57,7 @@ class FSRCNN(nn.Module):
             dilation=1
         )
         self.deconv2 = nn.ConvTranspose2d(
-            in_channels=2*inner_channels,
+            in_channels=20,
             out_channels=1,
             kernel_size=9,
             stride=2,
@@ -68,7 +68,7 @@ class FSRCNN(nn.Module):
 
     def forward(self, x):
         first = self.extract(x)
-        mid = self.expand(self.map(self.shrink(first)))
+        mid = self.expand(self.map(self.shrink(first))) + first
         return self.deconv2(self.deconv1(mid))
 
 

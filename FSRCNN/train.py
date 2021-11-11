@@ -62,8 +62,8 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
 def main():
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [9216, 784])
-    #train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,1152))
-    #val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,100))
+    #train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,4608))
+    #val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,400))
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,
@@ -78,7 +78,11 @@ def main():
         num_workers=config.NUM_WORKERS,
     )
 
-    model = FSRCNN(maps=10).to(config.DEVICE)
+    model = FSRCNN(
+        maps=10,
+        outer_channels=30,
+        inner_channels=10,
+    ).to(config.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
         model.parameters(),
@@ -110,7 +114,7 @@ def main():
         train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler)
         print("{0}/{1}".format(epoch,config.NUM_EPOCHS))
 
-        if epoch % 100 == 0:
+        if epoch % 20 == 0:
             if config.SAVE_MODEL:
                 save_checkpoint(model, opt, scheduler, filename=config.CHECKPOINT)
         if config.SAVE_IMG_CHKPNT:

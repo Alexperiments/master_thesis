@@ -60,12 +60,14 @@ class _RepeatSampler(object):
 
 
 def test():
-    dataset = MyImageFolder(root_dir=config.TRAIN_FOLDER)
+    dataset = MyImageFolder()
     loader = DataLoader(dataset, batch_size=config.BATCH_SIZE)
 
+    import torch
     for low_res, high_res in loader:
         print(low_res.shape)
         print(high_res.shape)
+        print(torch.min(high_res))
 
 
 if __name__ == "__main__":

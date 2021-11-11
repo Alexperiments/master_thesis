@@ -15,6 +15,8 @@ from model import FSRCNN
 from dataset import MyImageFolder
 from utils import load_checkpoint, plot_examples
 
+import time
+
 
 def plot_difference(source, model, target, num_samples=30):
     lr_folder = os.path.join(source, 'lr')
@@ -45,8 +47,8 @@ def plot_difference(source, model, target, num_samples=30):
         fig, axs = plt.subplots(1, 3, figsize=(12, 3))
         for i, matrix in enumerate([hr, sr, diff]):
             if i == 2:
-                minn = -0.01
-                maxx = 0.01
+                minn = -0.05
+                maxx = 0.05
             im = axs[i].imshow(matrix, cmap='hot', vmin=minn, vmax=maxx)
             plt.colorbar(im, ax=axs[i])
         axs[0].title.set_text('HR')
@@ -113,6 +115,103 @@ def check_distribution(source, model, target, num_samples=1000):
     plt.savefig(f"{target}std_difference.png", dpi=300)
 
 
+def bench_time(path, model, num_samples):
+    files = os.listdir(path)
+    data = []
+    for file in files[:num_samples]:
+        file_path = os.path.join(path, file)
+        numpy_array = np.load(file_path)
+        data.append(torch.from_numpy(numpy_array))
+
+    data = torch.stack(data).to(config.DEVICE)
+
+    data = data.unsqueeze(1)
+
+    t0 = time.time()
+    sr_out = model(data).squeeze(1)
+    delta_t = time.time() - t0
+    single_img_time = delta_t/num_samples
+    print(f"device: \t\t{config.DEVICE}")
+    print(f"processed image: \t{num_samples}")
+    print(f"total time: \t\t{delta_t:.6f} s")
+    print(f"single image mean: \t{single_img_time:.6f} s")
+
+
+def plot_worst_or_best(source, model, target, num_samples=30):
+    os.system(f"mkdir -p {target}")
+    lr = []
+    hr = []
+    slice = 1000
+    lr_path = os.path.join(source, 'lr')
+    hr_path = os.path.join(source, 'hr')
+    files = os.listdir(lr_path)
+    random.shuffle(files)
+    for file in files[:slice]:
+        lr_file_path = os.path.join(lr_path, file)
+        hr_file_path = os.path.join(hr_path, file)
+
+        hr_file = np.load(hr_file_path)
+        hr.append(torch.from_numpy(hr_file))
+
+        lr_file = np.load(lr_file_path)
+        lr.append(torch.from_numpy(lr_file))
+
+    lr = torch.stack(lr).to(config.DEVICE)
+    hr = torch.stack(hr).to(config.DEVICE)
+
+    min, _ = torch.min(lr.view(slice, 400), dim=1)
+    max, _ = torch.max(lr.view(slice, 400), dim=1)
+    min = min + torch.tensor(config.NORM_MIN)
+    max = max + torch.tensor(config.NORM_MAX)
+    minn = min.unsqueeze(1).unsqueeze(1).expand(slice, 20, 20)
+    maxx = max.unsqueeze(1).unsqueeze(1).expand(slice, 20, 20)
+    delta = torch.sub(maxx, minn)
+    sub_lr = torch.sub(lr, minn)
+    norm_lr = torch.div(sub_lr, delta)
+
+    norm_lr = norm_lr.unsqueeze(1)
+
+    sr = model(norm_lr).squeeze(1)
+
+    minn = min.unsqueeze(1).unsqueeze(1).expand(slice, 80, 80)
+    maxx = max.unsqueeze(1).unsqueeze(1).expand(slice, 80, 80)
+    delta = torch.sub(maxx, minn)
+    sr = torch.mul(sr, delta) + minn
+
+    diff = torch.sub(sr, hr)
+    losses = torch.mean(diff, dim=[1,2])
+    diff = torch.div(diff, hr)
+
+    sort = abs(losses.cpu().detach().numpy()).argsort()
+
+    hr = hr[sort].cpu()
+    sr = sr[sort].cpu()
+    diff = diff[sort].cpu()
+    minns = minn[sort].cpu()
+    maxxs = maxx[sort].cpu()
+
+    for j in range(1, num_samples):
+        one_hr = hr[-j, :, :].detach().numpy()
+        one_sr = sr[-j, :, :].detach().numpy()
+        one_diff = diff[-j, :, :].detach().numpy()
+        minn = minns[-j, 0, 0].numpy()
+        maxx = maxxs[-j, 0, 0].numpy()
+
+        fig, axs = plt.subplots(1, 3, figsize=(12, 3))
+        for i, matrix in enumerate([one_hr, one_sr, one_diff]):
+            if i == 2:
+                minn = -0.05
+                maxx = 0.05
+            im = axs[i].imshow(matrix, cmap='hot', vmin=minn, vmax=maxx)
+            plt.colorbar(im, ax=axs[i])
+        axs[0].title.set_text('HR')
+        axs[1].title.set_text('SR')
+        axs[2].title.set_text(f'(SR-HR)/HR {one_diff.min():.2f}')
+        plt.savefig(f"{target}{j}.png", dpi=300)
+        plt.close(fig)
+    model.train()
+
+
 def check_parameters():
     df = pd.read_csv(config.TRAIN_FOLDER + "parameters.txt", sep='\t')
     df.plot.scatter(' log10Mb ', ' log10Rb ', s=0.5, color='black')
@@ -139,6 +238,8 @@ load_checkpoint(
 )
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
-plot_difference(config.TRAIN_FOLDER, model, 'differences/')
-check_distribution(config.TRAIN_FOLDER, model, 'distributions/')
+#plot_difference(config.TRAIN_FOLDER, model, 'differences/')
+#check_distribution(config.TRAIN_FOLDER, model, 'distributions/', num_samples=10)
+plot_worst_or_best(config.TRAIN_FOLDER, model, 'best_worse/')
+#bench_time(config.TRAIN_FOLDER + 'hr/', model, num_samples=100)
 # check_parameters()
