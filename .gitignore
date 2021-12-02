@@ -12,6 +12,7 @@
 *.zip
 **/wandb/
 **/data_single/
+**best_worse/
 **/checkpoints/
 **/test/
 *.bak

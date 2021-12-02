@@ -79,14 +79,14 @@ def main():
     )
 
     model = FSRCNN(
-        maps=10,
+        maps=5,
         outer_channels=30,
         inner_channels=10,
     ).to(config.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
         model.parameters(),
-        lr=config.LEARNING_RATE,
+        lr=config.LEARNING_RATE
     )
     scheduler = ReduceLROnPlateau(
         opt,

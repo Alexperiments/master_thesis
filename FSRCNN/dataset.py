@@ -9,7 +9,8 @@ class MyImageFolder(Dataset):
     def __init__(self):
         super(MyImageFolder, self).__init__()
         self.root_dir = config.TRAIN_FOLDER
-        self.image_files_name = sorted(os.listdir(os.path.join(self.root_dir, 'hr')))
+        path = os.path.join(self.root_dir, 'hr')
+        self.image_files_name = sorted(os.listdir(path))
 
     def __len__(self):
         return len(self.image_files_name)

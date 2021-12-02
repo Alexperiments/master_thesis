@@ -42,10 +42,15 @@ def plot_examples(source, model, target_folder):
         with torch.no_grad():
             sr = model(
                 config.transform(lr, minn, maxx)
-                .unsqueeze(0)
-                .to(config.DEVICE)
+                    .unsqueeze(0)
+                    .to(config.DEVICE)
             )
         sr = config.reverse_transform(sr, minn, maxx)
-        int_sr = np.uint8(sr.cpu()*255)
+        int_sr = np.uint8(sr.cpu() * 255)
         cv2.imwrite(target_folder + file + ".png", int_sr)
     model.train()
+
+
+def max_difference_loss(x, y):
+    diff = torch.amax(y, dim=(2, 3)) - torch.amax(x, dim=(2, 3))
+    return torch.mean(torch.abs(diff))

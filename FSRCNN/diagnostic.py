@@ -9,9 +9,10 @@ import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp2d
 
 import config
-from model import FSRCNN
+from new_model import FSRCNN
 from dataset import MyImageFolder
 from utils import load_checkpoint, plot_examples
 
@@ -32,28 +33,41 @@ def plot_difference(source, model, target, num_samples=30):
         path_hr = os.path.join(hr_folder, file)
         hr = np.load(path_hr)
 
+        x_lr = np.arange(0, 20, 1)
+        x_hr = np.arange(0, 20, 0.25)
+
+        f_bic = interp2d(x_lr, x_lr, lr, kind='cubic')
+        bicubic = f_bic(x_hr, x_hr)
+
         minn = lr.min() + config.NORM_MIN
         maxx = lr.max() + config.NORM_MAX
 
+        t2 = time.time()
         with torch.no_grad():
             sr = model(
                 config.transform(lr, minn, maxx)
                 .unsqueeze(0)
                 .to(config.DEVICE)
-            ).cpu()
-        sr = config.reverse_transform(sr, minn, maxx)
-        diff = (sr-hr)/hr
+            )
+        sr = config.reverse_transform(sr.cpu(), minn, maxx)
+        diff_sr = (sr-hr)/hr
+        diff_bi = (bicubic-hr)/hr
 
-        fig, axs = plt.subplots(1, 3, figsize=(12, 3))
-        for i, matrix in enumerate([hr, sr, diff]):
-            if i == 2:
+        fig, axs = plt.subplots(2, 3, figsize=(13, 7))
+        fig.tight_layout(h_pad=2)
+        axs = axs.flatten()
+        for i, matrix in enumerate([hr, bicubic, sr, lr, diff_bi, diff_sr]):
+            if (i == 4) | (i == 5):
                 minn = -0.05
                 maxx = 0.05
             im = axs[i].imshow(matrix, cmap='hot', vmin=minn, vmax=maxx)
             plt.colorbar(im, ax=axs[i])
         axs[0].title.set_text('HR')
-        axs[1].title.set_text('SR')
-        axs[2].title.set_text(f'(SR-HR)/HR {diff.min():.2f}')
+        axs[1].title.set_text('bicubic')
+        axs[2].title.set_text('SR')
+        axs[3].title.set_text('LR')
+        axs[4].title.set_text(f'(bi-HR)/HR {diff_bi.min():.2f}')
+        axs[5].title.set_text(f'(SR-HR)/HR {diff_sr.min():.2f}')
         plt.savefig(f"{target}{file}.png", dpi=300)
         plt.close(fig)
     model.train()
@@ -218,7 +232,7 @@ def check_parameters():
     plt.show()
 
 
-model = FSRCNN(maps=10).to(config.DEVICE)
+model = FSRCNN().to(config.DEVICE)
 opt = optim.Adam(
     model.parameters(),
     lr=config.LEARNING_RATE,
@@ -238,8 +252,8 @@ load_checkpoint(
 )
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
-#plot_difference(config.TRAIN_FOLDER, model, 'differences/')
+plot_difference(config.TRAIN_FOLDER, model, 'differences/')
 #check_distribution(config.TRAIN_FOLDER, model, 'distributions/', num_samples=10)
-plot_worst_or_best(config.TRAIN_FOLDER, model, 'best_worse/')
+#plot_worst_or_best(config.TRAIN_FOLDER, model, 'best_worse/')
 #bench_time(config.TRAIN_FOLDER + 'hr/', model, num_samples=100)
 # check_parameters()

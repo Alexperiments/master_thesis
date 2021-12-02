@@ -14,11 +14,10 @@ class ConvBlock(nn.Module):
 class FSRCNN(nn.Module):
     def __init__(
         self,
-        scaling=4,
         in_channels=1,
         outer_channels=30,
         inner_channels=10,
-        maps=4
+        maps=5
     ):
         super().__init__()
         self.extract = ConvBlock(
@@ -47,12 +46,21 @@ class FSRCNN(nn.Module):
             out_channels=outer_channels,
             kernel_size=1
         )
-        self.deconv1 = nn.ConvTranspose2d(
+        self.deconv1_1 = nn.ConvTranspose2d(
             in_channels=outer_channels,
             out_channels=20,
-            kernel_size=9,
+            kernel_size=5,
             stride=2,
-            padding=4,
+            padding=2,
+            output_padding=1,
+            dilation=1
+        )
+        self.deconv1_2 = nn.ConvTranspose2d(
+            in_channels=outer_channels,
+            out_channels=20,
+            kernel_size=3,
+            stride=2,
+            padding=1,
             output_padding=1,
             dilation=1
         )
@@ -69,7 +77,7 @@ class FSRCNN(nn.Module):
     def forward(self, x):
         first = self.extract(x)
         mid = self.expand(self.map(self.shrink(first))) + first
-        return self.deconv2(self.deconv1(mid))
+        return self.deconv2(self.deconv1_1(mid)+self.deconv1_2(mid))
 
 
 def initialize_weights(model):
@@ -90,7 +98,7 @@ def main():
     batch_size = 512
     res = 20
 
-    fsrcnn = FSRCNN(maps=10).to(config.DEVICE)
+    fsrcnn = FSRCNN().to(config.DEVICE)
 
     x = torch.randn((batch_size, in_channels, res, res)).to(config.DEVICE)
     out = fsrcnn(x)
