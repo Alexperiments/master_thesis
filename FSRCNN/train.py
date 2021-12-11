@@ -10,14 +10,14 @@ from tqdm import tqdm
 
 import config
 from model import FSRCNN, initialize_weights
-from dataset import MyImageFolder, MultiEpochsDataLoader
+from dataset import MyImageFolder, MultiEpochsDataLoader, SingleExampleDataFolder
 from utils import load_checkpoint, save_checkpoint, plot_examples
 
 
 def wandb_init():
     wandb.init(
         entity='aled',
-        project="Tesi-ML-FSRCNN",
+        project="Tesi-ML-FSRCNN-test",
         config={
             "Architecture": "FSRCNN",
             "Learning Rate": config.LEARNING_RATE,
@@ -28,16 +28,18 @@ def wandb_init():
     )
 
 
-def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
+def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
     loop = tqdm(train_loader, leave=True)
     losses = []
     for low_res, high_res in loop:
+        low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
+        high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
+
         high_res = high_res.to(config.DEVICE)
         low_res = low_res.to(config.DEVICE)
-        with torch.cuda.amp.autocast():
-            super_res = model(low_res)
-            loss = l1(super_res, high_res)
-        wandb.log({"L1 train loss": loss})
+        super_res = model(low_res)
+        loss = l1(super_res, high_res)
+        if config.LOG_REPORT: wandb.log({"L1 train loss": loss})
         loop.set_postfix(L1=loss.item())
         losses.append(loss)
         loss.backward()
@@ -50,20 +52,22 @@ def train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler):
         for low_res, high_res in val_loader:
             high_res = high_res.to(config.DEVICE)
             low_res = low_res.to(config.DEVICE)
+            low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
+            high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
 
             super_res = model(low_res)
             val_loss.append(l1(super_res, high_res).item())
-        wandb.log({"L1 val loss": np.mean(val_loss)})
+        if config.LOG_REPORT: wandb.log({"L1 val loss": np.mean(val_loss)})
         model.train()
 
-    scheduler.step(sum(losses)/len(losses))
+    scheduler.step(sum(losses) / len(losses))
 
 
 def main():
-    dataset = MyImageFolder()
-    train_dataset, val_dataset = random_split(dataset, [9216, 784])
-    #train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,4608))
-    #val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,400))
+    dataset = SingleExampleDataFolder()
+    train_dataset, val_dataset = random_split(dataset, [19216, 784])
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9216))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 784))
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,
@@ -80,8 +84,9 @@ def main():
 
     model = FSRCNN(
         maps=5,
-        outer_channels=30,
-        inner_channels=10,
+        in_channels=1,
+        outer_channels=56,
+        inner_channels=12,
     ).to(config.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
@@ -99,8 +104,6 @@ def main():
 
     model.train()
 
-    scaler = torch.cuda.amp.GradScaler()
-
     if config.LOAD_MODEL:
         load_checkpoint(
             config.CHECKPOINT,
@@ -109,19 +112,19 @@ def main():
             scheduler,
         )
 
-    wandb_init()
-    for epoch in range(1, config.NUM_EPOCHS+1):
-        train_fn(train_loader, val_loader, model, opt, l1, scaler, scheduler)
-        print("{0}/{1}".format(epoch,config.NUM_EPOCHS))
+    if config.LOG_REPORT: wandb_init()
+    for epoch in range(1, config.NUM_EPOCHS + 1):
+        train_fn(train_loader, val_loader, model, opt, l1, scheduler)
+        print("{0}/{1}".format(epoch, config.NUM_EPOCHS))
 
         if epoch % 20 == 0:
             if config.SAVE_MODEL:
                 save_checkpoint(model, opt, scheduler, filename=config.CHECKPOINT)
         if config.SAVE_IMG_CHKPNT:
             if epoch % 100 == 0:
-                plot_examples(config.TRAIN_FOLDER, model, 'checkpoints/'+str(epoch)+'/')
+                plot_examples(config.TRAIN_FOLDER, model, 'checkpoints/' + str(epoch) + '/')
 
-    wandb.finish()
+    if config.LOG_REPORT: wandb.finish()
 
 
 if __name__ == "__main__":

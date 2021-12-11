@@ -1,7 +1,6 @@
 import torch
 import config
 import cv2
-import matplotlib.pyplot as plt
 import os
 import numpy as np
 
@@ -54,3 +53,35 @@ def plot_examples(source, model, target_folder):
 def max_difference_loss(x, y):
     diff = torch.amax(y, dim=(2, 3)) - torch.amax(x, dim=(2, 3))
     return torch.mean(torch.abs(diff))
+
+
+def calculate_max_min():
+    lr_path = os.path.join('train_data', 'lr')
+    hr_path = os.path.join('train_data', 'hr')
+    files = os.listdir(lr_path)
+    lr = []
+    hr = []
+    for file in files[:9000]:
+        lr_file_path = os.path.join(lr_path, file)
+        hr_file_path = os.path.join(hr_path, file)
+
+        hr_file = np.float32(np.load(hr_file_path))
+        hr.append(torch.from_numpy(hr_file))
+
+        lr_file = np.float32(np.load(lr_file_path))
+        lr.append(torch.from_numpy(lr_file))
+
+    lr = torch.stack(lr).to(config.DEVICE)
+    hr = torch.stack(hr).to(config.DEVICE)
+
+    lr_max = torch.amax(lr, axis=(0, 2, 3))
+    lr_min = torch.amin(lr, axis=(0, 2, 3))
+
+    hr_max = torch.amax(hr, axis=(0, 2, 3))
+    hr_min = torch.amin(hr, axis=(0, 2, 3))
+
+    delta_min = hr_min - lr_min
+    delta_max = hr_max - lr_max
+
+    print(f"Max deltas {delta_max.cpu().numpy() - config.NORM_MAX}")
+    print(f"Min deltas {delta_min.cpu().numpy() - config.NORM_MIN}")

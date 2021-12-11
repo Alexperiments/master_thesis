@@ -1,7 +1,5 @@
 import torch
-from torch import nn
 from torch import optim
-from torch.utils.data import DataLoader, Sampler
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import os
@@ -12,9 +10,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
 
 import config
-from new_model import FSRCNN
-from dataset import MyImageFolder
-from utils import load_checkpoint, plot_examples
+from model import FSRCNN
+from utils import load_checkpoint
 
 import time
 
@@ -42,7 +39,6 @@ def plot_difference(source, model, target, num_samples=30):
         minn = lr.min() + config.NORM_MIN
         maxx = lr.max() + config.NORM_MAX
 
-        t2 = time.time()
         with torch.no_grad():
             sr = model(
                 config.transform(lr, minn, maxx)
@@ -232,7 +228,66 @@ def check_parameters():
     plt.show()
 
 
-model = FSRCNN().to(config.DEVICE)
+def plot_difference_4ch(source, model, target, num_samples=30):
+    lr_folder = os.path.join(source, 'lr')
+    hr_folder = os.path.join(source, 'hr')
+    files = os.listdir(lr_folder)
+    random.shuffle(files)
+    os.system(f"mkdir -p {target}")
+    model.eval()
+    for file in files[:num_samples]:
+        path_lr = os.path.join(lr_folder, file)
+        lr = np.float32(np.load(path_lr))
+
+        path_hr = os.path.join(hr_folder, file)
+        hr = np.float32(np.load(path_hr))
+
+        delta_max = config.NORM_MAX.copy()
+        delta_min = config.NORM_MIN.copy()
+
+        delta_min = np.swapaxes(np.array([[delta_min]]), 0, 2)
+        delta_max = np.swapaxes(np.array([[delta_max]]), 0, 2)
+        maxx = np.float32(np.amax(lr, axis=(1, 2), keepdims=True) + delta_max)
+        minn = np.float32(np.amin(lr, axis=(1, 2), keepdims=True) + delta_min)
+
+        lr_input = config.transform(lr, minn, maxx)
+
+        lr_input = lr_input.view(-1, 1, config.LOW_RES, config.LOW_RES)
+
+        with torch.no_grad():
+            sr = model(
+                lr_input
+                .to(config.DEVICE)
+            ).cpu()
+        sr = sr.view(-1, config.HIGH_RES, config.HIGH_RES)
+        sr = config.reverse_transform(sr, minn, maxx)
+        diff_sr = (sr-hr)/hr
+
+        fig, axs = plt.subplots(4, 4, figsize=(12, 8))
+        fig.tight_layout(h_pad=2)
+        for i, matrix in enumerate([lr, hr, sr, diff_sr]):
+            for j in range(4):
+                if i == 3:im = axs[j, i].imshow(matrix[j], vmin=-0.05, vmax=0.05)
+                else: im = axs[j, i].imshow(matrix[j])
+                plt.colorbar(im, ax=axs[j, i])
+        axs[0, 0].title.set_text('LR')
+        axs[0, 1].title.set_text('HR')
+        axs[0, 2].title.set_text('SR')
+        axs[0, 3].title.set_text(f'(SR-HR)/HR {diff_sr.min():.2f}')
+        axs[0, 0].set_ylabel('density')
+        axs[1, 0].set_ylabel('vel. disp')
+        axs[2, 0].set_ylabel('M/L')
+        plt.savefig(f"{target}{file}.png", dpi=300)
+        plt.close(fig)
+    model.train()
+
+
+model = FSRCNN(
+    maps=5,
+    in_channels=1,
+    outer_channels=56,
+    inner_channels=12,
+).to(config.DEVICE)
 opt = optim.Adam(
     model.parameters(),
     lr=config.LEARNING_RATE,
@@ -252,7 +307,8 @@ load_checkpoint(
 )
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
-plot_difference(config.TRAIN_FOLDER, model, 'differences/')
+#plot_difference(config.TRAIN_FOLDER, model, 'differences/')
+plot_difference_4ch(config.TRAIN_FOLDER, model, 'differences/')
 #check_distribution(config.TRAIN_FOLDER, model, 'distributions/', num_samples=10)
 #plot_worst_or_best(config.TRAIN_FOLDER, model, 'best_worse/')
 #bench_time(config.TRAIN_FOLDER + 'hr/', model, num_samples=100)

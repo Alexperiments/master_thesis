@@ -20,6 +20,7 @@ class FSRCNN(nn.Module):
         maps=5
     ):
         super().__init__()
+        self.bicubic = torch.nn.Upsample(scale_factor=4, mode='bicubic')
         self.extract = ConvBlock(
             in_channels,
             out_channels=outer_channels,
@@ -46,47 +47,34 @@ class FSRCNN(nn.Module):
             out_channels=outer_channels,
             kernel_size=1
         )
-        self.deconv1_1 = nn.ConvTranspose2d(
+        self.deconv1 = nn.ConvTranspose2d(
             in_channels=outer_channels,
-            out_channels=20,
-            kernel_size=5,
-            stride=2,
-            padding=2,
-            output_padding=1,
-            dilation=1
-        )
-        self.deconv1_2 = nn.ConvTranspose2d(
-            in_channels=outer_channels,
-            out_channels=20,
-            kernel_size=3,
-            stride=2,
-            padding=1,
-            output_padding=1,
-            dilation=1
-        )
-        self.deconv2 = nn.ConvTranspose2d(
-            in_channels=20,
-            out_channels=1,
+            out_channels=10,
             kernel_size=9,
             stride=2,
             padding=4,
-            output_padding=1,
-            dilation=1
+            output_padding=1
+        )
+        self.deconv2 = nn.ConvTranspose2d(
+            in_channels=10,
+            out_channels=in_channels,
+            kernel_size=9,
+            stride=2,
+            padding=4,
+            output_padding=1
         )
 
     def forward(self, x):
+        bicubic = self.bicubic(x)
         first = self.extract(x)
         mid = self.expand(self.map(self.shrink(first))) + first
-        return self.deconv2(self.deconv1_1(mid)+self.deconv1_2(mid))
+        return self.deconv2(self.deconv1(mid)) + bicubic
 
 
 def initialize_weights(model):
     for m in model.modules():
         if isinstance(m, nn.Conv2d):
             nn.init.kaiming_normal_(m.weight.data)
-
-        #elif isinstance(m, nn.ConvTranspose2d):
-        #    nn.init.kaiming_normal_(m.weight.data)
 
 
 def main():
@@ -95,16 +83,21 @@ def main():
     import numpy as np
 
     in_channels = 1
-    batch_size = 512
+    batch_size = 128
     res = 20
 
-    fsrcnn = FSRCNN().to(config.DEVICE)
+    fsrcnn = FSRCNN(
+        maps=5,
+        in_channels=in_channels,
+        outer_channels=56,
+        inner_channels=12,
+    ).to(config.DEVICE)
 
     x = torch.randn((batch_size, in_channels, res, res)).to(config.DEVICE)
     out = fsrcnn(x)
     print(out.shape)
 
-    summary(fsrcnn, (1, 20, 20))
+    summary(fsrcnn, (in_channels, 20, 20))
     params_size = 0.23
     for_back_size = 1.85
     gpu_memory_Mb = 1750

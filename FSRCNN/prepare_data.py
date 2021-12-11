@@ -1,6 +1,4 @@
-import os, glob
-import numpy as np
-import random
+import os
 
 source = "dataset/"
 target = "train_data/"
@@ -15,9 +13,4 @@ for res, pix in zip(['lr', 'hr'], ['20', '80']):
     os.system(f"rename 's/_{pix}//' {target}{res}/*.npy")
 
 print("copied")
-'''N = len(os.listdir(f"{target}lr/"))
-names = np.arange(0, N)
-for res, dim in zip(['lr', 'hr'], [20, 80]):
-    for name in names:
-        array = np.load(f"{target}{res}/{name}.npy")
-        np.save(f"{target}{res}/{name}.npy", array.reshape(dim, dim))'''
+
