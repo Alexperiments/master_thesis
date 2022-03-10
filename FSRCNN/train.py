@@ -17,7 +17,7 @@ from utils import load_checkpoint, save_checkpoint, plot_examples
 def wandb_init():
     wandb.init(
         entity='aled',
-        project="Tesi-ML-FSRCNN-test",
+        project="Tesi-ML-FSRCNN",
         config={
             "Architecture": "FSRCNN",
             "Learning Rate": config.LEARNING_RATE,
@@ -39,7 +39,8 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
         low_res = low_res.to(config.DEVICE)
         super_res = model(low_res)
         loss = l1(super_res, high_res)
-        if config.LOG_REPORT: wandb.log({"L1 train loss": loss})
+        if config.LOG_REPORT:
+            wandb.log({"L1 train loss": loss})
         loop.set_postfix(L1=loss.item())
         losses.append(loss)
         loss.backward()
@@ -57,7 +58,8 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
 
             super_res = model(low_res)
             val_loss.append(l1(super_res, high_res).item())
-        if config.LOG_REPORT: wandb.log({"L1 val loss": np.mean(val_loss)})
+        if config.LOG_REPORT:
+            wandb.log({"L1 val loss": np.mean(val_loss)})
         model.train()
 
     scheduler.step(sum(losses) / len(losses))
@@ -65,9 +67,9 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
 
 def main():
     dataset = SingleExampleDataFolder()
-    train_dataset, val_dataset = random_split(dataset, [19216, 784])
-    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9216))
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 784))
+    train_dataset, val_dataset = random_split(dataset, [18944, 1056])
+    # train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9216))
+    # val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 784))
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,

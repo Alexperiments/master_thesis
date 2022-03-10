@@ -1,3 +1,4 @@
+import pandas as pd
 import torch
 import config
 import cv2
@@ -85,3 +86,15 @@ def calculate_max_min():
 
     print(f"Max deltas {delta_max.cpu().numpy() - config.NORM_MAX}")
     print(f"Min deltas {delta_min.cpu().numpy() - config.NORM_MIN}")
+
+
+def refactor_parameters_file():
+    source = config.TRAIN_FOLDER + 'parameters.txt'
+    target = config.TRAIN_FOLDER + 'parameters.hdf'
+    df = pd.read_csv(source, sep='\t')
+    df.drop('IDs ', axis=1, inplace=True)
+    new_columns = [s.replace(" ", "") for s in df.columns]
+    df.columns = new_columns
+    df.to_pickle(target)
+
+refactor_parameters_file()
