@@ -1,0 +1,81 @@
+login: 				ssh adiana00@login.m100.cineca.it
+copy local->cineca: 		scp (-r) file adiana00@login.m100.cineca.it:test_script/
+use ML/deeplearning modules: 	module load profile/deeplrn && module load autoload cineca-ai/2.1.0
+install a new package:		module load profile/deeplrn
+				module load autoload cineca-ai/<version>
+				python -m venv <myvenv> --system-site-packages
+				source <myvenv>/bin/activate
+				pip install PACKAGE
+
+
+
+
+
+
+
+
+
+
+PACKAGES
+
+-------------------- /cineca/prod/opt/modulefiles/profiles ---------------------
+profile/advanced  profile/base       profile/chem-phys  profile/lifesc        
+profile/archive   profile/bioinf     profile/deeplrn    profile/quantum       
+profile/astro     profile/candidate  profile/global     profile/–type=simple  
+
+---------------- /cineca/prod/opt/modulefiles/base/environment -----------------
+autoload  
+
+----------------- /cineca/prod/opt/modulefiles/base/libraries ------------------
+amgx/2.0.1--cuda--10.1                          szip/2.1.1--gnu--8.4.0   
+amgx/2.2.0--cuda--11.0                          zlib/1.2.11--gnu--8.4.0  
+armadillo/10.8.2--gnu--8.4.0                    
+blas/3.8.0--gnu--8.4.0                          
+boost/1.72.0--spectrum_mpi--10.3.1--binary      
+boost/1.76.0--spectrum_mpi--10.4.0--binary      
+elpa/2020.11.001--spectrum_mpi--10.4.0--binary  
+elsi/2.5.0--gnu--8.4.0                          
+essl/6.2.1--binary                              
+fftw/3.3.8--gnu--8.4.0                          
+fftw/3.3.8--spectrum_mpi--10.3.1--binary        
+fftw/3.3.8--spectrum_mpi--10.4.0--binary        
+gsl/2.6--gnu--8.4.0                             
+hdf5/1.12.0--gnu--8.4.0                         
+hdf5/1.12.0--spectrum_mpi--10.3.1--binary       
+hdf5/1.12.0--spectrum_mpi--10.4.0--binary       
+jsoncpp/1.9.3--spectrum_mpi--10.3.1--binary     
+lapack/3.9.0--gnu--8.4.0                        
+libxc/4.3.4--gnu--8.4.0                         
+magma/2.5.3--cuda--10.1                         
+magma/2.5.3--cuda--10.2                         
+nccl/2.6.4--cuda--10.1                          
+nccl/2.7.8--cuda--10.2                          
+nccl/2.8.3--cuda--11.3                          
+netcdf/4.7.3--gnu--8.4.0                        
+netcdf/4.7.3--spectrum_mpi--10.3.1--binary      
+netcdff/4.5.2--gnu--8.4.0                       
+netcdff/4.5.2--spectrum_mpi--10.3.1--binary     
+numpy/1.19.4--python--3.8.2                     
+openblas/0.3.9--gnu--8.4.0                      
+petsc/3.13.1--spectrum_mpi--10.3.1--binary      
+pnetcdf/1.12.2--spectrum_mpi--10.3.1--binary    
+scalapack/2.1.0--spectrum_mpi--10.3.1--binary   
+scalapack/2.1.0--spectrum_mpi--10.4.0--binary   
+slate/2021.05.02--spectrum_mpi--10.4.0--binary  
+
+----------------- /cineca/prod/opt/modulefiles/base/compilers ------------------
+cuda/10.1  gnu/8.4.0             python/3.8.2                 
+cuda/10.2  gnu/10.3.0            spectrum_mpi/10.3.1--binary  
+cuda/11.0  hpc-sdk/2020--binary  spectrum_mpi/10.4.0--binary  
+cuda/11.2  hpc-sdk/2021--binary  xl/16.1.1--binary            
+cuda/11.3  python/3.7.7          
+
+------------------- /cineca/prod/opt/modulefiles/base/tools --------------------
+anaconda/2020.02  git/2.27.0     octave/6.2.0       superc/2.0          
+anaconda/2020.11  gnuplot/5.2.6  rcm/01             totalview/2020.2.6  
+binutils/2.34     grace/5.99     singularity/3.6.1  valgrind/3.17.0     
+cmake/3.20.0      likwid/5.2.1   singularity/3.7.0  vim/8.2             
+extrae/3.8.0      ncview/2.1.7   spack/0.14.2-prod  
+
+---------------- /cineca/prod/opt/modulefiles/base/applications ----------------
+vmd/1.9.3 

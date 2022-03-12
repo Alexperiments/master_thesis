@@ -10,6 +10,7 @@
 **/upscaled/
 **/differences/
 **/distributions/
+**/diagnostic/
 *.zip
 **/wandb/
 **/data_single/
@@ -17,3 +18,5 @@
 **/checkpoints/
 **/test/
 *.bak
+.gitmessage.txt
+
