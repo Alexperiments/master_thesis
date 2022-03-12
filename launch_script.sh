@@ -6,7 +6,7 @@
 #SBATCH --ntasks-per-node=64                # 8 tasks out of 128
 #SBATCH --gres=gpu:4                       # 1 gpus per node out of 4
 #SBATCH --mem=40Gb                         # memory per node out of 246000MB
-#SBATCH --job-name=Fabio_training_run0
+#SBATCH --job-name=sr_job_run0
 #SBATCH --error=error_file/run0.err
 #SBATCH --qos=normal
 #SBATCH --mail-type=ALL
