@@ -2,6 +2,7 @@
 **test_data/
 **dataset/
 **data/
+**.idea/
 **/__pycache__/
 **/logs/
 *pth.tar
@@ -9,9 +10,13 @@
 **/upscaled/
 **/differences/
 **/distributions/
+**/diagnostic/
 *.zip
 **/wandb/
 **/data_single/
+**best_worse/
 **/checkpoints/
 **/test/
 *.bak
+.gitmessage.txt
+

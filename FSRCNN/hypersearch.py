@@ -3,15 +3,18 @@ import os
 import numpy as np
 
 import torch
-import config as cfg
 from torch import nn
 from torch import optim
-from utils import load_checkpoint, save_checkpoint, plot_examples
-from torch.utils.data import DataLoader
-from model import FSRCNN, initialize_weights
-from tqdm import tqdm
-from dataset import MyImageFolder
+from torch.utils.data import DataLoader, random_split
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 import wandb
+from tqdm import tqdm
+
+import config
+from new_model import FSRCNN, initialize_weights
+from dataset import MyImageFolder
+from utils import load_checkpoint, save_checkpoint, plot_examples
 
 import ray
 from ray import tune
@@ -21,24 +24,22 @@ from ray.tune.integration.wandb import WandbLogger
 from ray.tune.logger import DEFAULT_LOGGERS
 
 
-def train_fn(train_loader, val_loader, model, opt, loss, scaler):
+def train_fn(train_loader, val_loader, model, opt, loss, scaler, scheduler):
     loop = tqdm(train_loader, leave=True)
-    loss_all_batches = []
-    for idx, (low_res, high_res) in enumerate(loop):
+    losses = []
+    for low_res, high_res in loop:
         high_res = high_res.to(cfg.DEVICE)
         low_res = low_res.to(cfg.DEVICE)
-
         with torch.cuda.amp.autocast():
             super_res = model(low_res)
             train_loss = loss(super_res, high_res)
             loss_all_batches.append(train_loss.item())
-        #wandb.log({"train loss": train_loss, "LR": cfg.LEARNING_RATE})
-        loop.set_postfix(train_loss=train_loss.item())
 
+        loop.set_postfix(train_loss=train_loss.item())
+        losses.append(train_loss)
+        loss.backward()
+        opt.step()
         opt.zero_grad()
-        scaler.scale(train_loss).backward()
-        scaler.step(opt)
-        scaler.update()
 
     with torch.no_grad():
         model.eval()
@@ -52,25 +53,43 @@ def train_fn(train_loader, val_loader, model, opt, loss, scaler):
         tune.report(val_loss=np.mean(val_loss))
         model.train()
 
+    scheduler.step(sum(losses)/len(losses))
+
 
 def main(config):
-    train_dataset = MyImageFolder(root_dir='/home/ale/Scrivania/Tesi-ML/FSRCNN/'+cfg.TRAIN_FOLDER)
+    dataset = MyImageFolder()
+    train_dataset, val_dataset = random_split(dataset, [9216, 784])
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,100))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,100))
+
     train_loader = DataLoader(
         train_dataset,
-        batch_size=config['batch_size'],
+        batch_size=cfg.BATCH_SIZE,
         shuffle=True,
-        num_workers=cfg.NUM_WORKERS
+        num_workers=cfg.NUM_WORKERS,
+        drop_last=True
     )
-    val_dataset = MyImageFolder(root_dir='/home/ale/Scrivania/Tesi-ML/FSRCNN/'+cfg.TEST_FOLDER)
     val_loader = DataLoader(
-        train_dataset,
-        batch_size=config['batch_size'],
-        num_workers=cfg.NUM_WORKERS
+        val_dataset,
+        batch_size=cfg.BATCH_SIZE,
+        num_workers=cfg.NUM_WORKERS,
     )
-    model = FSRCNN(in_channels=cfg.IMG_CHANNELS, maps=config['hidden']).to(cfg.DEVICE)
+
+    model = FSRCNN().to(cfg.DEVICE)
     initialize_weights(model)
-    opt = optim.Adam(model.parameters(), lr=config['lr'], betas=(config['beta1'], config['beta2']))
+    opt = optim.Adam(
+        model.parameters(),
+        lr=cfg.LEARNING_RATE,
+        betas=(config['beta1'], config['beta2'])
+    )
     loss = nn.L1Loss()
+    scheduler = ReduceLROnPlateau(
+        opt,
+        'min',
+        factor=0.5,
+        patience=10,
+        verbose=True
+    )
 
     model.train()
 
@@ -78,10 +97,6 @@ def main(config):
 
     for epoch in range(1, cfg.NUM_EPOCHS+1):
         train_fn(train_loader, val_loader, model, opt, loss, scaler)
-        #print("{0}/{1}".format(epoch,cfg.NUM_EPOCHS))
-        if epoch % 100 == 0:
-            # This saves the model to the trial directory
-            torch.save(model, "./model.pth")
 
 
 if __name__ == "__main__":
@@ -107,17 +122,16 @@ if __name__ == "__main__":
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
         stop={
-            "training_iteration": 100
+            "training_iteration": 300
         },
         resources_per_trial={
             "cpu": 2,
-            "gpu": 1  # set this for GPUs
+            "gpu": 1
         },
-        num_samples=8,
+        num_samples=50,
         config={
-            "lr": tune.loguniform(1e-5, 4e-3),
-            "hidden": 4,
-            "batch_size": tune.choice([32, 64, 128, 256]),
+            "beta1": tune.uniform(0.8, 1),
+            "beta2": tune.uniform(0.9, 1),
             # wandb config
             "wandb":{
                 "entity": 'aled',
