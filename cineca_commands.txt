@@ -1,5 +1,12 @@
 login: 				ssh adiana00@login.m100.cineca.it
+
+home:				cd $HOME
+temporary folder (~ 40 days):	cd $CINECA_SCRATCH
+project shared space:		cd $WORK
+
 copy local->cineca: 		scp (-r) file adiana00@login.m100.cineca.it:test_script/
+
+list available modules:		module avail
 use ML/deeplearning modules: 	module load profile/deeplrn && module load autoload cineca-ai/2.1.0
 install a new package:		module load profile/deeplrn
 				module load autoload cineca-ai/<version>
@@ -7,7 +14,13 @@ install a new package:		module load profile/deeplrn
 				source <myvenv>/bin/activate
 				pip install PACKAGE
 
+run quick scripts (< 1 min):	python3 "script_to_be_launched"
+launch long scripts:		sbatch "script_to_be_launched"
 
+get jobs IDs:			squeue -u "adiana00"
+cancel a job:			scancel $job_ID
+
+get hours left:			saldo -b (project name is: INF22_teongrav_0)
 
 
 
