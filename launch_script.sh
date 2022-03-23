@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -A INF21_teongrav_0
+#SBATCH -A INF22_teongrav_0
 #SBATCH -p m100_usr_prod
 #SBATCH --time 24:00:00                    # format: HH:MM:SS
 #SBATCH -N 1                               # 1 node
@@ -14,4 +14,4 @@
 
 cd /m100/home/userexternal/adiana00/Tesi-ML/FSRCNN/
 
-python3 script.py
+python3 test_cineca.py
