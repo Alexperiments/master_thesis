@@ -3,6 +3,9 @@ from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 import wandb
 import numpy as np
@@ -26,6 +29,23 @@ def wandb_init():
         },
         settings=wandb.Settings(start_method='fork')
     )
+
+
+def init_multiprocess(rank, world_size):
+    import os
+
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+
+    dist.init_process_group(backend='gloo', world_size=world_size, rank=rank, start_method='forkserver')
+
+
+def cleanup_multiprocess():
+    dist.destroy_process_group()
+
+
+def run_ddp_main(demo_fn, world_size):
+    mp.spawn(demo_fn, args=(world_size,), nprocs=world_size, join=True)
 
 
 def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
@@ -65,7 +85,7 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
     scheduler.step(sum(losses) / len(losses))
 
 
-def main():
+def main(rank, world_size):
     dataset = SingleExampleDataFolder()
     train_dataset, val_dataset = random_split(dataset, [18944, 1056])
     # train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9216))
@@ -84,15 +104,20 @@ def main():
         num_workers=config.NUM_WORKERS,
     )
 
+    init_multiprocess(rank=rank, world_size=world_size)
+
     model = FSRCNN(
         maps=5,
         in_channels=1,
         outer_channels=56,
         inner_channels=12,
-    ).to(config.DEVICE)
-    initialize_weights(model)
+    ).to(rank)
+
+    ddp_model = DDP(model, device_ids=[rank], output_device=0)
+
+    initialize_weights(ddp_model)
     opt = optim.Adam(
-        model.parameters(),
+        ddp_model.parameters(),
         lr=config.LEARNING_RATE
     )
     scheduler = ReduceLROnPlateau(
@@ -104,30 +129,31 @@ def main():
     )
     l1 = nn.L1Loss()
 
-    model.train()
+    ddp_model.train()
 
     if config.LOAD_MODEL:
         load_checkpoint(
             config.CHECKPOINT,
-            model,
+            ddp_model,
             opt,
             scheduler,
         )
 
     if config.LOG_REPORT: wandb_init()
     for epoch in range(1, config.NUM_EPOCHS + 1):
-        train_fn(train_loader, val_loader, model, opt, l1, scheduler)
+        train_fn(train_loader, val_loader, ddp_model, opt, l1, scheduler)
         print("{0}/{1}".format(epoch, config.NUM_EPOCHS))
 
         if epoch % 20 == 0:
             if config.SAVE_MODEL:
-                save_checkpoint(model, opt, scheduler, filename=config.CHECKPOINT)
+                save_checkpoint(ddp_model, opt, scheduler, filename=config.CHECKPOINT)
         if config.SAVE_IMG_CHKPNT:
             if epoch % 100 == 0:
-                plot_examples(config.TRAIN_FOLDER, model, 'checkpoints/' + str(epoch) + '/')
+                plot_examples(config.TRAIN_FOLDER, ddp_model, 'checkpoints/' + str(epoch) + '/')
 
     if config.LOG_REPORT: wandb.finish()
+    cleanup_multiprocess()
 
 
 if __name__ == "__main__":
-    main()
+    run_ddp_main(main, config.GPU_NUMBER)
