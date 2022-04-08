@@ -16,7 +16,7 @@ install a new package:		module load profile/deeplrn
 
 run quick scripts (< 1 min):	python3 "script_to_be_launched"
 launch long scripts:		sbatch "script_to_be_launched"
-launch interactive job:		salloc -N1 --ntasks-per-node=2 --cpus-per-task=4 --gres=gpu:2 -A 					INF22_teongrav_0 -p m100_usr_prod --time=00:01:00
+launch interactive job:		salloc -N1 --ntasks-per-node=2 --cpus-per-task=4 --gres=gpu:2 -A 					INF22_teongrav_0 -p m100_usr_prod --time=01:00:00
 
 get jobs IDs:			squeue -u "adiana00"
 cancel a job:			scancel $job_ID
