@@ -108,8 +108,8 @@ class SingleExampleDataFolder(Dataset):
 
 
 def test():
-    dataset = SingleExampleDataFolder()
-    loader = DataLoader(dataset, batch_size=config.BATCH_SIZE)
+    dataset = MyImageFolder()
+    loader = MultiEpochsDataLoader(dataset, batch_size=config.BATCH_SIZE)
 
     for low_res, high_res in loader:
         print(low_res.shape)

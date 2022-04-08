@@ -27,7 +27,8 @@ def wandb_init():
             "Batch Size": config.BATCH_SIZE,
             "Max Epochs": config.NUM_EPOCHS,
         },
-        settings=wandb.Settings(start_method='fork')
+        settings=wandb.Settings(start_method='fork'),
+        mode="offline"
     )
 
 
@@ -52,44 +53,43 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
     loop = tqdm(train_loader, leave=True)
     losses = []
     for low_res, high_res in loop:
-        low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
-        high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
+        # low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
+        # high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
 
         high_res = high_res.to(rank)
         low_res = low_res.to(rank)
         super_res = model(low_res)
         loss = l1(super_res, high_res)
-        if config.LOG_REPORT:
-            wandb.log({"L1 train loss": loss})
         loop.set_postfix(L1=loss.item())
         losses.append(loss)
         loss.backward()
         opt.step()
         opt.zero_grad()
-
+    
     with torch.no_grad():
         model.eval()
         val_loss = []
         for low_res, high_res in val_loader:
             high_res = high_res.to(rank)
             low_res = low_res.to(rank)
-            low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
-            high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
+            # low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
+            # high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
 
             super_res = model(low_res)
             val_loss.append(l1(super_res, high_res).item())
         if config.LOG_REPORT:
             wandb.log({"L1 val loss": np.mean(val_loss)})
         model.train()
-
+    if config.LOG_REPORT:
+        wandb.log({"L1 train loss": sum(losses) / len(losses)})
     scheduler.step(sum(losses) / len(losses))
 
 
 def main(rank, world_size):
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [18944, 1056])
-    # train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9216))
-    # val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 784))
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 256))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 10))
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,
