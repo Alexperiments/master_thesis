@@ -82,7 +82,7 @@ def main():
     import config
     import numpy as np
 
-    in_channels = 1
+    in_channels = 4
     batch_size = 128
     res = 20
 
