@@ -17,16 +17,11 @@ from dataset import MyImageFolder, MultiEpochsDataLoader, SingleExampleDataFolde
 from utils import load_checkpoint, save_checkpoint, plot_examples
 
 
-def wandb_init():
+def wandb_init(config_dict):
     wandb.init(
         entity='aled',
         project="Tesi-ML-FSRCNN",
-        config={
-            "Architecture": "FSRCNN",
-            "Learning Rate": config.LEARNING_RATE,
-            "Batch Size": config.BATCH_SIZE,
-            "Max Epochs": config.NUM_EPOCHS,
-        },
+        config=config_dict,
         settings=wandb.Settings(start_method='fork'),
         mode="offline"
     )
@@ -47,6 +42,17 @@ def cleanup_multiprocess():
 
 def run_ddp_main(demo_fn, world_size):
     mp.spawn(demo_fn, args=(world_size,), nprocs=world_size, join=True)
+    
+
+config_dict = {
+    "Architecture": "FSRCNN",
+    "Learning Rate": config.LEARNING_RATE,
+    "Batch Size": config.BATCH_SIZE,
+    "Max Epochs": config.NUM_EPOCHS,
+    "N. GPUs": config.GPU_NUMBER,
+    "N. workers": config.NUM_WORKERS,
+    "Img. channels": config.IMG_CHANNELS,
+}
 
 
 def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
@@ -90,6 +96,9 @@ def main(rank, world_size):
     train_dataset, val_dataset = random_split(dataset, [18944, 1056])
     train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 256))
     val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 10))
+    
+    config_dict["Training size"] = len(train_dataset)
+    config_dict["Validation size"] = len(val_dataset)
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,
@@ -107,12 +116,17 @@ def main(rank, world_size):
     init_multiprocess(rank=rank, world_size=world_size)
 
     model = FSRCNN(
-        maps=5,
+        maps=config.MAPS,
         in_channels=config.IMG_CHANNELS,
-        outer_channels=56,
-        inner_channels=12,
+        outer_channels=config.OUTER_CHANNELS,
+        inner_channels=config.INNER_CHANNELS,
     ).to(rank)
-
+    
+    config_dict["maps"] = config.MAPS
+    config_dict["in_channels"] = config.IMG_CHANNELS
+    config_dict["outer_channels"] = config.OUTER_CHANNELS
+    config_dict["inner_channels"] = config.INNER_CHANNELS
+    
     ddp_model = DDP(model, device_ids=[rank], output_device=0)
 
     initialize_weights(ddp_model)
@@ -123,10 +137,14 @@ def main(rank, world_size):
     scheduler = ReduceLROnPlateau(
         opt,
         'min',
-        factor=0.5,
-        patience=10,
+        factor=config.LR_DECAY_FACTOR,
+        patience=config.DECAY_PATIENCE,
         verbose=True
     )
+    
+    config_dict["LR decay factor"] = config.LR_DECAY_FACTOR
+    config_dict["Weight decay patience"] = config.DECAY_PATIENCE
+    
     l1 = nn.L1Loss()
 
     ddp_model.train()
@@ -139,7 +157,7 @@ def main(rank, world_size):
             scheduler,
         )
 
-    if config.LOG_REPORT: wandb_init()
+    if config.LOG_REPORT: wandb_init(config_dict)
     for epoch in range(1, config.NUM_EPOCHS + 1):
         train_fn(train_loader, val_loader, ddp_model, opt, l1, scheduler, rank)
         print("{0}/{1}".format(epoch, config.NUM_EPOCHS))
