@@ -37,7 +37,7 @@ def init_multiprocess(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
 
-    dist.init_process_group(backend='gloo', world_size=world_size, rank=rank, start_method='forkserver')
+    dist.init_process_group(backend='nccl', world_size=world_size, rank=rank)
 
 
 def cleanup_multiprocess():
@@ -48,15 +48,15 @@ def run_ddp_main(demo_fn, world_size):
     mp.spawn(demo_fn, args=(world_size,), nprocs=world_size, join=True)
 
 
-def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
+def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
     loop = tqdm(train_loader, leave=True)
     losses = []
     for low_res, high_res in loop:
         low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
         high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
 
-        high_res = high_res.to(config.DEVICE)
-        low_res = low_res.to(config.DEVICE)
+        high_res = high_res.to(rank)
+        low_res = low_res.to(rank)
         super_res = model(low_res)
         loss = l1(super_res, high_res)
         if config.LOG_REPORT:
@@ -71,8 +71,8 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
         model.eval()
         val_loss = []
         for low_res, high_res in val_loader:
-            high_res = high_res.to(config.DEVICE)
-            low_res = low_res.to(config.DEVICE)
+            high_res = high_res.to(rank)
+            low_res = low_res.to(rank)
             low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
             high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
 
@@ -86,7 +86,7 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler):
 
 
 def main(rank, world_size):
-    dataset = SingleExampleDataFolder()
+    dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [18944, 1056])
     # train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9216))
     # val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 784))
@@ -108,7 +108,7 @@ def main(rank, world_size):
 
     model = FSRCNN(
         maps=5,
-        in_channels=1,
+        in_channels=config.IMG_CHANNELS,
         outer_channels=56,
         inner_channels=12,
     ).to(rank)
@@ -141,7 +141,7 @@ def main(rank, world_size):
 
     if config.LOG_REPORT: wandb_init()
     for epoch in range(1, config.NUM_EPOCHS + 1):
-        train_fn(train_loader, val_loader, ddp_model, opt, l1, scheduler)
+        train_fn(train_loader, val_loader, ddp_model, opt, l1, scheduler, rank)
         print("{0}/{1}".format(epoch, config.NUM_EPOCHS))
 
         if epoch % 20 == 0:
