@@ -3,7 +3,7 @@ import torch
 LOAD_MODEL = False
 SAVE_MODEL = True
 SAVE_IMG_CHKPNT = False
-LOG_REPORT = False
+LOG_REPORT = True
 CHECKPOINT = "fsrcnn.pth.tar"
 TRAIN_FOLDER = 'train_data/'
 TEST_FOLDER = 'test_data/'
@@ -15,7 +15,7 @@ NUM_WORKERS = 4
 HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
 IMG_CHANNELS = 4
-GPU_NUMBER = 1
+GPU_NUMBER = 4
 
 NORM_MAX = [0.14, 10.54, 0.028, 0.000044]
 NORM_MIN = [0, -14.53, -0.002, 0]
