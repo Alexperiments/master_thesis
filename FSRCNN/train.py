@@ -94,16 +94,12 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
 def main(rank, world_size):
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [18944, 1056])
-<<<<<<< HEAD
-    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 256))
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 10))
+
+    # train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 256))
+    # val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 10))
     
     config_dict["Training size"] = len(train_dataset)
     config_dict["Validation size"] = len(val_dataset)
-=======
-    # train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 256))
-    # val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 10))
->>>>>>> ffafc9dad4e1bf9ebb9a68ffd7cece4782eb301c
 
     train_loader = MultiEpochsDataLoader(
         train_dataset,

@@ -24,4 +24,4 @@
 error_file/
 *.out
 *.txt
-
+launch_script.sh

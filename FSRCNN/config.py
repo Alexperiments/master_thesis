@@ -9,26 +9,23 @@ TRAIN_FOLDER = 'train_data/'
 TEST_FOLDER = 'test_data/'
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_WORKERS = 4
-GPU_NUMBER = 1
+NUM_WORKERS = 8
+GPU_NUMBER = 4
 
 LEARNING_RATE = 0.002#0.000158967
-NUM_EPOCHS = 21
+NUM_EPOCHS = 300
 BATCH_SIZE = 256
 
 HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
 IMG_CHANNELS = 4
-<<<<<<< HEAD
+
 OUTER_CHANNELS = 56
 INNER_CHANNELS = 12
 MAPS = 5
 
 LR_DECAY_FACTOR = 0.5
 DECAY_PATIENCE = 10
-=======
-GPU_NUMBER = 4
->>>>>>> ffafc9dad4e1bf9ebb9a68ffd7cece4782eb301c
 
 NORM_MAX = [0.14, 10.54, 0.028, 0.000044]
 NORM_MIN = [0, -14.53, -0.002, 0]
