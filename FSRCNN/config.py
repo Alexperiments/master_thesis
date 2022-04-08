@@ -3,8 +3,8 @@ import torch
 LOAD_MODEL = False
 SAVE_MODEL = True
 SAVE_IMG_CHKPNT = False
-LOG_REPORT = True
-CHECKPOINT = "fsrcnn.pth.tar"
+LOG_REPORT = False
+CHECKPOINT = "/m100/home/userexternal/adiana00/Tesi-ML/fsrcnn.pth.tar"
 TRAIN_FOLDER = 'train_data/'
 TEST_FOLDER = 'test_data/'
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
