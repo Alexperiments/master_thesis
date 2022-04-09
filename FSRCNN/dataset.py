@@ -8,6 +8,8 @@ import config
 class MyImageFolder(Dataset):
     def __init__(self):
         super(MyImageFolder, self).__init__()
+        print("HGGEEY")
+        os.getcwd()
         self.root_dir = config.TRAIN_FOLDER
         path = os.path.join(self.root_dir, 'hr')
         self.image_files_name = sorted(os.listdir(path))

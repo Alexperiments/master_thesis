@@ -5,6 +5,7 @@ temporary folder (~ 40 days):	cd $CINECA_SCRATCH
 project shared space:		cd $WORK
 
 copy local->cineca: 		scp (-r) file adiana00@login.m100.cineca.it:test_script/
+copy cineca->local: 		scp -r adiana00@login.m100.cineca.it:Tesi-ML/FSRCNN/wandb/ wandb/
 
 list available modules:		module avail
 use ML/deeplearning modules: 	module load profile/deeplrn && module load autoload cineca-ai/2.1.0

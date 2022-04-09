@@ -1,0 +1,5 @@
+[default]
+entity = aled
+project = Tesi-ML-FSRCNN
+base_url = https://api.wandb.ai
+
