@@ -10,6 +10,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 import wandb
 import numpy as np
 from tqdm import tqdm
+import datetime
 
 import config
 from model import FSRCNN, initialize_weights
@@ -23,7 +24,8 @@ def wandb_init(config_dict):
         project="Tesi-ML-FSRCNN",
         config=config_dict,
         settings=wandb.Settings(start_method='fork'),
-        mode="offline"
+        mode="offline",
+	group=f"{datetime.datetime.now()}",
     )
 
 
@@ -95,8 +97,8 @@ def main(rank, world_size):
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [18944, 1056])
 
-    # train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 256))
-    # val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 10))
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9472))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 528))
     
     config_dict["Training size"] = len(train_dataset)
     config_dict["Validation size"] = len(val_dataset)
