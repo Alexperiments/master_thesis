@@ -6,6 +6,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.profiler import profile, record_function, ProfilerActivity
 
 import wandb
 import numpy as np
@@ -99,7 +100,7 @@ def main(rank, world_size):
 
     train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9472))
     val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 528))
-    
+
     config_dict["Training size"] = len(train_dataset)
     config_dict["Validation size"] = len(val_dataset)
 
