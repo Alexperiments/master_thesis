@@ -1,26 +1,26 @@
-import argparse
-import os
-import numpy as np
-
 import torch
 from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 import wandb
+import numpy as np
 from tqdm import tqdm
 
 import config
-from new_model import FSRCNN, initialize_weights
-from dataset import MyImageFolder
+from model import FSRCNN, initialize_weights
+from dataset import MyImageFolder, MultiEpochsDataLoader, SingleExampleDataFolder
 from utils import load_checkpoint, save_checkpoint, plot_examples
 
 import ray
 from ray import tune
 from ray.tune.schedulers.hb_bohb import HyperBandForBOHB
 from ray.tune.suggest.bohb import TuneBOHB
-from ray.tune.integration.wandb import WandbLogger
+from ray.tune.integration.wandb import WandbLogger, wandb_mixin
 from ray.tune.logger import DEFAULT_LOGGERS
 
 
@@ -28,15 +28,12 @@ def train_fn(train_loader, val_loader, model, opt, loss, scaler, scheduler):
     loop = tqdm(train_loader, leave=True)
     losses = []
     for low_res, high_res in loop:
-        high_res = high_res.to(cfg.DEVICE)
-        low_res = low_res.to(cfg.DEVICE)
-        with torch.cuda.amp.autocast():
-            super_res = model(low_res)
-            train_loss = loss(super_res, high_res)
-            loss_all_batches.append(train_loss.item())
-
-        loop.set_postfix(train_loss=train_loss.item())
-        losses.append(train_loss)
+        high_res = high_res.to(rank)
+        low_res = low_res.to(rank)
+        super_res = model(low_res)
+        loss = l1(super_res, high_res)
+        loop.set_postfix(L1=loss.item())
+        losses.append(loss)
         loss.backward()
         opt.step()
         opt.zero_grad()
@@ -45,37 +42,41 @@ def train_fn(train_loader, val_loader, model, opt, loss, scaler, scheduler):
         model.eval()
         val_loss = []
         for low_res, high_res in val_loader:
-            high_res = high_res.to(cfg.DEVICE)
-            low_res = low_res.to(cfg.DEVICE)
+            high_res = high_res.to(rank)
+            low_res = low_res.to(rank)
 
             super_res = model(low_res)
-            val_loss.append(loss(super_res, high_res).item())
-        tune.report(val_loss=np.mean(val_loss))
+            val_loss.append(l1(super_res, high_res).item())
         model.train()
 
     scheduler.step(sum(losses)/len(losses))
-
+    
 
 def main(config):
     dataset = MyImageFolder()
-    train_dataset, val_dataset = random_split(dataset, [9216, 784])
-    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,100))
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,100))
+    train_dataset, val_dataset = random_split(dataset, [18944, 1056])
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,512))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,10))
 
-    train_loader = DataLoader(
+    train_loader = MultiEpochsDataLoader(
         train_dataset,
-        batch_size=cfg.BATCH_SIZE,
+        batch_size=config.BATCH_SIZE,
         shuffle=True,
-        num_workers=cfg.NUM_WORKERS,
+        num_workers=config.NUM_WORKERS,
         drop_last=True
     )
-    val_loader = DataLoader(
+    val_loader = MultiEpochsDataLoader(
         val_dataset,
-        batch_size=cfg.BATCH_SIZE,
-        num_workers=cfg.NUM_WORKERS,
+        batch_size=config.BATCH_SIZE,
+        num_workers=config.NUM_WORKERS,
     )
 
-    model = FSRCNN().to(cfg.DEVICE)
+    model = FSRCNN(
+        maps=config.MAPS,
+        in_channels=config.IMG_CHANNELS,
+        outer_channels=config.OUTER_CHANNELS,
+        inner_channels=config.INNER_CHANNELS,
+    ).to(cfg.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
         model.parameters(),
@@ -86,14 +87,12 @@ def main(config):
     scheduler = ReduceLROnPlateau(
         opt,
         'min',
-        factor=0.5,
-        patience=10,
+        factor=config.LR_DECAY_FACTOR,
+        patience=config.DECAY_PATIENCE,
         verbose=True
     )
 
     model.train()
-
-    scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(1, cfg.NUM_EPOCHS+1):
         train_fn(train_loader, val_loader, model, opt, loss, scaler)

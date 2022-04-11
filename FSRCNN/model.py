@@ -98,9 +98,9 @@ def main():
     print(out.shape)
 
     summary(fsrcnn, (in_channels, 20, 20))
-    params_size = 0.23
-    for_back_size = 1.85
-    gpu_memory_Mb = 1750
+    params_size = 0.24
+    for_back_size = 2.20
+    gpu_memory_Mb = 15*1000 # 1750
     batch_size = (gpu_memory_Mb - params_size)/(for_back_size)
     # round to the
     batch_pow_2 = np.uint(2**np.uint(np.log2(batch_size)))

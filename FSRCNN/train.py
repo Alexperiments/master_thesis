@@ -7,6 +7,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.distributed as dist
 import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.profiler import profile, record_function, ProfilerActivity
 
 import wandb
 import numpy as np
@@ -45,7 +46,7 @@ def cleanup_multiprocess():
 
 def run_ddp_main(demo_fn, world_size):
     mp.spawn(demo_fn, args=(world_size,), nprocs=world_size, join=True)
-    
+
 
 config_dict = {
     "Architecture": "FSRCNN",
@@ -76,7 +77,7 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
         loss.backward()
         opt.step()
         opt.zero_grad()
-    
+
     with torch.no_grad():
         model.eval()
         val_loss = []
@@ -103,8 +104,6 @@ def main(rank, world_size):
     train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 16384)) #  9472))
     val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 1024))
 
-    print(len(train_dataset))
-    
     config_dict["Training size"] = len(train_dataset)
     config_dict["Validation size"] = len(val_dataset)
 
@@ -141,12 +140,12 @@ def main(rank, world_size):
         outer_channels=config.OUTER_CHANNELS,
         inner_channels=config.INNER_CHANNELS,
     ).to(rank)
-    
+
     config_dict["maps"] = config.MAPS
     config_dict["in_channels"] = config.IMG_CHANNELS
     config_dict["outer_channels"] = config.OUTER_CHANNELS
     config_dict["inner_channels"] = config.INNER_CHANNELS
-    
+
     ddp_model = DDP(model, device_ids=[rank], output_device=0)
 
     initialize_weights(ddp_model)
@@ -161,10 +160,10 @@ def main(rank, world_size):
         patience=config.DECAY_PATIENCE,
         verbose=True
     )
-    
+
     config_dict["LR decay factor"] = config.LR_DECAY_FACTOR
     config_dict["Weight decay patience"] = config.DECAY_PATIENCE
-    
+
     l1 = nn.L1Loss()
 
     ddp_model.train()

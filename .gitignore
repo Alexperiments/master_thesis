@@ -20,8 +20,6 @@
 **/test/
 *.bak
 .gitmessage.txt
-<<<<<<< HEAD
 error_file/
 *.out
 *.txt
-launch_script.sh

@@ -9,8 +9,8 @@ TRAIN_FOLDER = 'train_data/'
 TEST_FOLDER = 'test_data/'
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-NUM_WORKERS = 8
-GPU_NUMBER = 4
+NUM_WORKERS = 2
+GPU_NUMBER = 1
 
 LEARNING_RATE = 0.016 #  0.000158967
 NUM_EPOCHS = 300
