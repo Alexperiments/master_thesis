@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader, random_split
+from torch.utils.data.distributed import DistributedSampler
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.distributed as dist
 import torch.multiprocessing as mp
@@ -60,7 +61,9 @@ config_dict = {
 def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
     loop = tqdm(train_loader, leave=True)
     losses = []
+    print(f"Rank: {rank}")
     for low_res, high_res in loop:
+        print("Access")
         # low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
         # high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
 
@@ -97,17 +100,29 @@ def main(rank, world_size):
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [18944, 1056])
 
-    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9472))
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 528))
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 16384)) #  9472))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 1024))
+
+    print(len(train_dataset))
     
     config_dict["Training size"] = len(train_dataset)
     config_dict["Validation size"] = len(val_dataset)
 
+    train_sampler = DistributedSampler(
+        train_dataset,  
+        num_replicas=world_size,
+        rank=rank,
+        # shuffle=True
+    )
+
+    #  Probabilmente va aggiunto anche il val_sampler da passare al val_loader
+    #  quando il validation set diventerà molto grande.
+
     train_loader = MultiEpochsDataLoader(
         train_dataset,
         batch_size=config.BATCH_SIZE,
-        shuffle=True,
         num_workers=config.NUM_WORKERS,
+        sampler=train_sampler,
         drop_last=True
     )
     val_loader = MultiEpochsDataLoader(
@@ -115,6 +130,8 @@ def main(rank, world_size):
         batch_size=config.BATCH_SIZE,
         num_workers=config.NUM_WORKERS,
     )
+
+    print(len(train_loader))
 
     init_multiprocess(rank=rank, world_size=world_size)
 
@@ -162,11 +179,12 @@ def main(rank, world_size):
 
     if config.LOG_REPORT: wandb_init(config_dict)
     for epoch in range(1, config.NUM_EPOCHS + 1):
+        train_sampler.set_epoch(epoch)
         train_fn(train_loader, val_loader, ddp_model, opt, l1, scheduler, rank)
         print("{0}/{1}".format(epoch, config.NUM_EPOCHS))
 
         if epoch % 20 == 0:
-            if config.SAVE_MODEL:
+            if config.SAVE_MODEL & (rank==0):
                 save_checkpoint(ddp_model, opt, scheduler, filename=config.CHECKPOINT)
         if config.SAVE_IMG_CHKPNT:
             if epoch % 100 == 0:
