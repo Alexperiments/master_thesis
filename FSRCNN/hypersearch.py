@@ -3,9 +3,6 @@ from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-import torch.distributed as dist
-import torch.multiprocessing as mp
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 import wandb
 import numpy as np
@@ -22,9 +19,10 @@ from ray.tune.schedulers.hb_bohb import HyperBandForBOHB
 from ray.tune.suggest.bohb import TuneBOHB
 from ray.tune.integration.wandb import WandbLogger, wandb_mixin
 from ray.tune.logger import DEFAULT_LOGGERS
+from ray.tune import CLIReporter
 
 
-def train_fn(train_loader, val_loader, model, opt, loss, scaler, scheduler):
+def train_fn(train_loader, val_loader, model, opt, loss, scaler, scheduler, rank):
     loop = tqdm(train_loader, leave=True)
     losses = []
     for low_res, high_res in loop:
@@ -50,12 +48,12 @@ def train_fn(train_loader, val_loader, model, opt, loss, scaler, scheduler):
         model.train()
 
     scheduler.step(sum(losses)/len(losses))
-    
+
 
 def main(config):
     dataset = MyImageFolder()
     train_dataset, val_dataset = random_split(dataset, [18944, 1056])
-    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,512))
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,128))
     val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,10))
 
     train_loader = MultiEpochsDataLoader(
@@ -99,19 +97,33 @@ def main(config):
 
 
 if __name__ == "__main__":
-    ray.init(object_store_memory=8e7)
+    ray.init(object_store_memory=2e8)
     #wandb_init()
     # for early stopping
     bohb_hyperband = HyperBandForBOHB(
         time_attr="training_iteration",
-        max_t=1000,
-        reduction_factor=4,
-        stop_last_trials=False)
+        max_t=cfg.NUM_EPOCHS,
+        reduction_factor=2,
+    )
 
+    reporter = CLIReporter(
+        parameter_columns=["lr", "batch_size"],
+        metric_columns=["val_loss", "training_iteration"]
+    )
 
-    bohb_search = TuneBOHB(
-        # space=config_space,  # If you want to set the space manually
-        max_concurrent=4)
+    bohb_search = TuneBOHB(max_concurrent=4)
+
+    config_dict = {
+        "lr": tune.grid_search(1e-4, 2e-4, 4e-4, 8e-4, 16e-4, 32e-4, 64e-4, 128e-4),
+        "batch_size": tune.grid_search(128, 256, 512, 1024, 2048, 4096),
+        # wandb config
+        "wandb":{
+            "entity": 'aled',
+            "project": "Optimize FSRCNN",
+            "api_key_file": ".wandbapi.txt",
+            "log_config": True
+        }
+    }
 
     analysis = tune.run(
         main,
@@ -120,25 +132,16 @@ if __name__ == "__main__":
         name="bohb_test",
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
+        progress_reporter=reporter,
         stop={
-            "training_iteration": 300
+            "training_iteration": cfg.NUM_EPOCHS
         },
         resources_per_trial={
-            "cpu": 2,
-            "gpu": 1
+            "cpu": 1,
+            "gpu": 0
         },
-        num_samples=50,
-        config={
-            "beta1": tune.uniform(0.8, 1),
-            "beta2": tune.uniform(0.9, 1),
-            # wandb config
-            "wandb":{
-                "entity": 'aled',
-                "project": "Optimize FSRCNN",
-                "api_key_file": ".wandbapi.txt",
-                "log_config": True
-            }
-        },
+        num_samples=1,
+        config=config_dict,
         loggers = DEFAULT_LOGGERS + (WandbLogger, )
     )
     #wandb.finish()
