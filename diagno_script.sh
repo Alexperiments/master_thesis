@@ -15,5 +15,10 @@
 
 cd /m100/home/userexternal/adiana00/Tesi-ML/FSRCNN/
 
-module load profile/deeplrn && module load autoload cineca-ai/2.1.0
-python3 train.py
+module load profile/deeplrn
+module load autoload cineca-ai/2.1.0
+module load autoload python
+module load autoload pytorch
+export PYTHONPATH=$PYTHONPATH:/cineca/prod/opt/libraries/cineca-ai/2.1.0/none/cineca-ai-conda-env-py3.8-cuda-openmpi-11.0/lib/python3.8/site-packages
+
+python3 diagnostic.py
