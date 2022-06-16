@@ -252,14 +252,14 @@ def plot_difference_4ch(source, model, target, num_samples=30):
 
         lr_input = config.transform(lr, minn, maxx)
 
-        lr_input = lr_input.view(-1, 1, config.LOW_RES, config.LOW_RES)
+        lr_input = lr_input.unsqueeze(0)
 
         with torch.no_grad():
             sr = model(
                 lr_input
                 .to(config.DEVICE)
             ).cpu()
-        sr = sr.view(-1, config.HIGH_RES, config.HIGH_RES)
+        sr = sr.squeeze(0)
         sr = config.reverse_transform(sr, minn, maxx)
         diff_sr = (sr-hr)/hr
 
@@ -284,28 +284,16 @@ def plot_difference_4ch(source, model, target, num_samples=30):
 
 
 model = FSRCNN(
-    maps=5,
-    in_channels=1,
-    outer_channels=56,
-    inner_channels=12,
+    maps=config.MAPS,
+    in_channels=config.IMG_CHANNELS,
+    outer_channels=config.OUTER_CHANNELS,
+    inner_channels=config.INNER_CHANNELS,
 ).to(config.DEVICE)
-opt = optim.Adam(
-    model.parameters(),
-    lr=config.LEARNING_RATE,
-)
-scheduler = ReduceLROnPlateau(
-    opt,
-    'min',
-    factor=0.5,
-    patience=10,
-    verbose=True
-)
-load_checkpoint(
-    config.CHECKPOINT,
-    model,
-    opt,
-    scheduler
-)
+
+state_dict = torch.load(config.CHECKPOINT)['state_dict']
+state_dict = {k.replace('module.', ''): v for (k, v) in state_dict.items()}
+model.load_state_dict(state_dict)
+model.eval()
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
 #plot_difference(config.TRAIN_FOLDER, model, 'differences/')
