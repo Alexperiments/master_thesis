@@ -17,7 +17,6 @@ import ray
 from ray import tune
 from ray.tune.schedulers.hb_bohb import HyperBandForBOHB
 from ray.tune.suggest.bohb import TuneBOHB
-from ray.tune.integration.wandb import WandbLogger, wandb_mixin
 from ray.tune.logger import DEFAULT_LOGGERS
 from ray.tune import CLIReporter
 
