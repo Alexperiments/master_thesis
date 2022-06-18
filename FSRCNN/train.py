@@ -95,10 +95,10 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
 
 def main(rank, world_size):
     dataset = MyImageFolder()
-    train_dataset, val_dataset = random_split(dataset, [61440, 4096])
+    train_dataset, val_dataset = random_split(dataset, [61419, 4096])
 
     train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 8192)) # 512 # 1024 # 2048 # 4096 # 8192
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 1024))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 2048))
 
     config_dict["Training size"] = len(train_dataset)
     config_dict["Validation size"] = len(val_dataset)
@@ -143,7 +143,7 @@ def main(rank, world_size):
     opt = optim.Adam(
         ddp_model.parameters(),
         lr=config.LEARNING_RATE,
-        # betas=(0.95, 0.96),
+        betas=(0.95, 0.96),
     )
     scheduler = ReduceLROnPlateau(
         opt,

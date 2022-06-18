@@ -11,19 +11,6 @@ class ConvBlock(nn.Module):
         return self.act(self.conv(x))
 
 
-'''class ResBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, **kwargs):
-        super().__init__()
-        self.conv_block = ConvBlock(
-            in_channels,
-            out_channels,
-            **kwargs
-        )
-
-    def forward(self, x):
-        return self.conv_block(x) + x'''
-
-
 class FSRCNN(nn.Module):
     def __init__(
         self,

@@ -68,34 +68,34 @@ def main(config):
     wandb_init(config)
 
     dataset = MyImageFolder(working_directory)
-    train_dataset, val_dataset = random_split(dataset, [61440, 4096])
+    train_dataset, val_dataset = random_split(dataset, [61419, 4096])
     train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 4096))
     val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 10))
 
     train_loader = DataLoader(
         train_dataset,
-        batch_size=cfg.BATCH_SIZE  # config["batch_size"],
+        batch_size=cfg.BATCH_SIZE,  # config["batch_size"],
         shuffle=True,
         num_workers=cfg.NUM_WORKERS,
         drop_last=True
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=cfg.BATCH_SIZE  # config["batch_size"],
+        batch_size=cfg.BATCH_SIZE,  # config["batch_size"],
         num_workers=cfg.NUM_WORKERS,
     )
 
     model = FSRCNN(
         maps=config['maps'],  # cfg.MAPS,
         in_channels=cfg.IMG_CHANNELS,
-        outer_channels=config['out_channels']  # cfg.OUTER_CHANNELS,
-        inner_channels=config['in_channels']  # cfg.INNER_CHANNELS,
+        outer_channels=config['out_channels'],  # cfg.OUTER_CHANNELS,
+        inner_channels=config['in_channels'],  # cfg.INNER_CHANNELS,
     ).to(cfg.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
         model.parameters(),
-        lr=cfg.LAERNING_RATE  # config['lr'],
-        # betas=(config["beta1"], config["beta2"])
+        lr=cfg.LEARNING_RATE,  # config['lr'],
+        betas=(0.95,0.96), # betas=(config["beta1"], config["beta2"])
     )
     loss = nn.L1Loss()
     scheduler = ReduceLROnPlateau(
