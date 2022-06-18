@@ -11,16 +11,29 @@ class ConvBlock(nn.Module):
         return self.act(self.conv(x))
 
 
+'''class ResBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, **kwargs):
+        super().__init__()
+        self.conv_block = ConvBlock(
+            in_channels,
+            out_channels,
+            **kwargs
+        )
+
+    def forward(self, x):
+        return self.conv_block(x) + x'''
+
+
 class FSRCNN(nn.Module):
     def __init__(
         self,
         in_channels=1,
         outer_channels=30,
         inner_channels=10,
-        maps=5
+        maps=5,
     ):
         super().__init__()
-        self.bicubic = torch.nn.Upsample(scale_factor=4, mode='bicubic')
+        self.bicubic = nn.Upsample(scale_factor=4, mode='bicubic')
         self.extract = ConvBlock(
             in_channels,
             out_channels=outer_channels,
@@ -78,12 +91,11 @@ def initialize_weights(model):
 
 
 def main():
-    from torchsummary import summary
     import config
     import numpy as np
 
     in_channels = 4
-    batch_size = 128
+    batch_size = 10
     res = 20
 
     fsrcnn = FSRCNN(
@@ -91,20 +103,21 @@ def main():
         in_channels=in_channels,
         outer_channels=56,
         inner_channels=12,
-    ).to(config.DEVICE)
+    )
 
-    x = torch.randn((batch_size, in_channels, res, res)).to(config.DEVICE)
+    x = torch.randn((batch_size, in_channels, res, res))
     out = fsrcnn(x)
     print(out.shape)
 
-    summary(fsrcnn, (in_channels, 20, 20))
-    params_size = 0.24
-    for_back_size = 2.20
-    gpu_memory_Mb = 15*1000 # 1750
-    batch_size = (gpu_memory_Mb - params_size)/(for_back_size)
+    # from torchsummary import summary
+    # summary(fsrcnn, (in_channels, 20, 20))
+    # params_size = 0.24
+    # for_back_size = 2.20
+    # gpu_memory_Mb = 15*1000 # 1750
+    # batch_size = (gpu_memory_Mb - params_size)/(for_back_size)
     # round to the
-    batch_pow_2 = np.uint(2**np.uint(np.log2(batch_size)))
-    print(f"On the current gpu the best batch size is: {batch_pow_2}")
+    # batch_pow_2 = np.uint(2**np.uint(np.log2(batch_size)))
+    # print(f"On the current gpu the best batch size is: {batch_pow_2}")
 
 
 if __name__ == '__main__':

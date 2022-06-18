@@ -6,8 +6,9 @@ import config
 
 
 class MyImageFolder(Dataset):
-    def __init__(self):
+    def __init__(self, root="."):
         super(MyImageFolder, self).__init__()
+        os.chdir(root)
         self.root_dir = config.TRAIN_FOLDER
         path = os.path.join(self.root_dir, 'hr')
         self.image_files_name = sorted(os.listdir(path))
@@ -17,11 +18,11 @@ class MyImageFolder(Dataset):
 
     def __getitem__(self, index):
         file_name = self.image_files_name[index]
-        map = [0,1,2,3]
+        map = [0, 1, 2, 3]
         delta_max = config.NORM_MAX.copy()
         delta_min = config.NORM_MIN.copy()
-        #del delta_min[1]
-        #del delta_max[1]
+        # del delta_min[1]
+        # del delta_max[1]
         delta_min = np.swapaxes(np.array([[delta_min]]), 0, 2)
         delta_max = np.swapaxes(np.array([[delta_max]]), 0, 2)
 
@@ -59,6 +60,7 @@ class _RepeatSampler(object):
     Args:
         sampler (Sampler)
     """
+
     def __init__(self, sampler):
         self.sampler = sampler
 
