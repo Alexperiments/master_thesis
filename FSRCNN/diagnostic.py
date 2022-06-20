@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
 
 import config
-from model import FSRCNN
+from model import FSRCNN, original_FSRCNN
 from utils import load_checkpoint
 
 import time
@@ -281,7 +281,6 @@ def plot_difference_4ch(source, model, target, num_samples=30):
         plt.savefig(f"{target}{file}.png", dpi=300)
         plt.close(fig)
     model.train()
-
 
 model = FSRCNN(
     maps=config.MAPS,

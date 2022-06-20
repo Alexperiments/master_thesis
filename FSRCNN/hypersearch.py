@@ -28,7 +28,7 @@ def wandb_init(config_dict={}):
         config=config_dict,
         settings=wandb.Settings(start_method='fork'),
         mode="offline",
-        group="local_hyperparameters"
+        group="local_hyperparameters_2"
     )
 
 
@@ -70,32 +70,32 @@ def main(config):
     dataset = MyImageFolder(working_directory)
     train_dataset, val_dataset = random_split(dataset, [61419, 4096])
     train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 4096))
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 10))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 512))
 
     train_loader = DataLoader(
         train_dataset,
-        batch_size=cfg.BATCH_SIZE,  # config["batch_size"],
+        batch_size=config["batch_size"],
         shuffle=True,
         num_workers=cfg.NUM_WORKERS,
         drop_last=True
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=cfg.BATCH_SIZE,  # config["batch_size"],
+        batch_size=config["batch_size"],
         num_workers=cfg.NUM_WORKERS,
     )
 
     model = FSRCNN(
-        maps=config['maps'],  # cfg.MAPS,
+        maps=cfg.MAPS,
         in_channels=cfg.IMG_CHANNELS,
-        outer_channels=config['out_channels'],  # cfg.OUTER_CHANNELS,
-        inner_channels=config['in_channels'],  # cfg.INNER_CHANNELS,
+        outer_channels=cfg.OUTER_CHANNELS,
+        inner_channels=cfg.INNER_CHANNELS,
     ).to(cfg.DEVICE)
     initialize_weights(model)
     opt = optim.Adam(
         model.parameters(),
-        lr=cfg.LEARNING_RATE,  # config['lr'],
-        betas=(0.95,0.96), # betas=(config["beta1"], config["beta2"])
+        lr=config['lr'],
+        betas=(config["beta1"], config["beta2"])
     )
     loss = nn.L1Loss()
     scheduler = ReduceLROnPlateau(
@@ -122,15 +122,16 @@ if __name__ == "__main__":
     ray.init(object_store_memory=1e9)  # , address='auto')
 
     config_dict = {
-        "maps": tune.randint(1,10),
-        "out_channels": tune.randint(40, 60),
-        "in_channels": tune.randint(6, 16),
+        "lr": tune.loguniform(5e-4, 5e-2),
+        "batch_size": tune.choice([16, 32, 64]),
+        "beta1": tune.uniform(0.8, 1),
+        "beta2": tune.uniform(0.9, 1)
     }
 
     bohb_hyperband = HyperBandForBOHB(
         time_attr="training_iteration",
         reduction_factor=2,
-        max_t=300
+        max_t=600
     )
 
     bohb_search = TuneBOHB()
@@ -138,14 +139,13 @@ if __name__ == "__main__":
 
     analysis = tune.run(
         main,
-        name="bohb_test",
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
         resources_per_trial={
-            "cpu": 6,
+            "cpu": 8,
             "gpu": 0.5
         },
-        num_samples=100,
+        num_samples=128,
         config=config_dict,
         metric="train_loss",
         mode="min",

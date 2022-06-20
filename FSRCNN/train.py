@@ -15,7 +15,7 @@ from tqdm import tqdm
 import datetime
 
 import config
-from model import FSRCNN, initialize_weights
+from model import FSRCNN, initialize_weights, original_FSRCNN
 from dataset import MyImageFolder, MultiEpochsDataLoader, SingleExampleDataFolder
 from utils import load_checkpoint, save_checkpoint, plot_examples
 
@@ -131,7 +131,7 @@ def main(rank, world_size):
         outer_channels=config.OUTER_CHANNELS,
         inner_channels=config.INNER_CHANNELS,
     ).to(rank)
-
+    # model = original_FSRCNN()
     config_dict["maps"] = config.MAPS
     config_dict["in_channels"] = config.IMG_CHANNELS
     config_dict["outer_channels"] = config.OUTER_CHANNELS

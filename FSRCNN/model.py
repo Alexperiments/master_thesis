@@ -49,14 +49,14 @@ class FSRCNN(nn.Module):
         )
         self.deconv1 = nn.ConvTranspose2d(
             in_channels=outer_channels,
-            out_channels=10,
+            out_channels=inner_channels,
             kernel_size=9,
             stride=2,
             padding=4,
             output_padding=1
         )
         self.deconv2 = nn.ConvTranspose2d(
-            in_channels=10,
+            in_channels=inner_channels,
             out_channels=in_channels,
             kernel_size=9,
             stride=2,
@@ -75,6 +75,56 @@ def initialize_weights(model):
     for m in model.modules():
         if isinstance(m, nn.Conv2d):
             nn.init.kaiming_normal_(m.weight.data)
+
+
+class original_FSRCNN(nn.Module):
+    def __init__(
+        self,
+        in_channels=4,
+        outer_channels=56,
+        inner_channels=12,
+        maps=4,
+    ):
+        super().__init__()
+        self.extract = ConvBlock(
+            in_channels,
+            out_channels=outer_channels,
+            kernel_size=5,
+            padding=2,
+            stride=1
+        )
+        self.shrink = ConvBlock(
+            in_channels=outer_channels,
+            out_channels=inner_channels,
+            kernel_size=1
+        )
+        self.map = nn.Sequential(
+            *[ConvBlock(
+                in_channels=inner_channels,
+                out_channels=inner_channels,
+                kernel_size=3,
+                padding=1,
+                stride=1
+            ) for _ in range(maps)]
+        )
+        self.expand = ConvBlock(
+            in_channels=inner_channels,
+            out_channels=outer_channels,
+            kernel_size=1
+        )
+        self.deconv = nn.ConvTranspose2d(
+            in_channels=outer_channels,
+            out_channels=in_channels,
+            kernel_size=9,
+            stride=4,
+            padding=3,
+            output_padding=1
+        )
+
+    def forward(self, x):
+        first = self.extract(x)
+        mid = self.expand(self.map(self.shrink(first)))
+        return self.deconv(mid)
 
 
 def main():
