@@ -15,7 +15,7 @@ from tqdm import tqdm
 import datetime
 
 import config
-from model import FSRCNN, initialize_weights, original_FSRCNN
+from model import FSRCNN, initialize_weights
 from dataset import MyImageFolder, MultiEpochsDataLoader, SingleExampleDataFolder
 from utils import load_checkpoint, save_checkpoint, plot_examples
 
@@ -64,8 +64,8 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
     train_losses = []
 
     for low_res, high_res in loop:
-        high_res = high_res.to(rank)
-        low_res = low_res.to(rank)
+        high_res = high_res.view(-1, 1, 80, 80).to(rank)
+        low_res = low_res.view(-1, 1, 20, 20).to(rank)
         super_res = model(low_res)
         loss = l1(super_res, high_res)
         loop.set_postfix(L1=loss.item())
@@ -78,8 +78,8 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
         model.eval()
         val_losses = []
         for low_res, high_res in val_loader:
-            high_res = high_res.to(rank)
-            low_res = low_res.to(rank)
+            high_res = high_res.view(-1, 1, 80, 80).to(rank)
+            low_res = low_res.view(-1, 1, 20, 20).to(rank)
             super_res = model(low_res)
             val_losses.append(l1(super_res, high_res).item())
         model.train()
@@ -91,13 +91,14 @@ def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
         wandb.log({"L1 val loss": val_loss})
         wandb.log({"L1 train loss": train_loss})
     scheduler.step(train_loss)
+
     return train_loss, val_loss
 
 def main(rank, world_size):
     dataset = MyImageFolder()
-    train_dataset, val_dataset = random_split(dataset, [61419, 4096])
+    train_dataset, val_dataset = random_split(dataset, [61399, 4096])
 
-    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 8192)) # 512 # 1024 # 2048 # 4096 # 8192
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 4096)) # 512 # 1024 # 2048 # 4096 # 8192
     val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 4096))
 
     config_dict["Training size"] = len(train_dataset)

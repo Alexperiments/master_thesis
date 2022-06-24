@@ -12,19 +12,19 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 NUM_WORKERS = 2
 GPU_NUMBER = 1
 
-LEARNING_RATE = 0.0035 #  0.000158967
+LEARNING_RATE = 0.0035  # 0.000158967
 NUM_EPOCHS = 400
-BATCH_SIZE = 32 # 4096
-BETA1 = 0.957
-BETA2 = 0.929
+BATCH_SIZE = 32
+BETA1 = 0.9 # 0.957
+BETA2 = 0.999 # 0.929
 
 HIGH_RES = 80
 LOW_RES = HIGH_RES // 4
-IMG_CHANNELS = 4
+IMG_CHANNELS = 1
 
-OUTER_CHANNELS = 56
-INNER_CHANNELS = 12
-MAPS = 4
+OUTER_CHANNELS = 60
+INNER_CHANNELS = 18
+MAPS = 8
 
 LR_DECAY_FACTOR = 0.5
 DECAY_PATIENCE = 10
@@ -32,10 +32,12 @@ DECAY_PATIENCE = 10
 NORM_MAX = [0.14, 10.54, 0.028, 0.000044]
 NORM_MIN = [0, -14.53, -0.002, 0]
 
+
 def transform(array, min, max):
-    norm = (array-min)/(max-min)
+    norm = (array - min) / (max - min)
     return torch.from_numpy(norm)
 
+
 def reverse_transform(norm, min, max):
-    array = norm*(max-min) + min
+    array = norm * (max - min) + min
     return array.squeeze(0)

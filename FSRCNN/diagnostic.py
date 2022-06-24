@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
 
 import config
-from model import FSRCNN, original_FSRCNN
+from model import FSRCNN
 from utils import load_checkpoint
 
 import time
@@ -235,6 +235,12 @@ def plot_difference_4ch(source, model, target, num_samples=30):
     random.shuffle(files)
     os.system(f"mkdir -p {target}")
     model.eval()
+
+
+    files = [
+        '10641.npy',  '44651.npy', '15851.npy',   '26711.npy',  
+    ]
+
     for file in files[:num_samples]:
         path_lr = os.path.join(lr_folder, file)
         lr = np.float32(np.load(path_lr))
@@ -256,9 +262,10 @@ def plot_difference_4ch(source, model, target, num_samples=30):
         with torch.no_grad():
             sr = model(
                 lr_input
+                .view(4, 1, 20, 20)
                 .to(config.DEVICE)
             ).cpu()
-        sr = sr.squeeze(0)
+        sr = sr.view(1, 4, 80, 80).squeeze(0)
 
         sr = config.reverse_transform(sr, minn, maxx)
         diff_sr = (sr-hr)/hr
@@ -267,7 +274,8 @@ def plot_difference_4ch(source, model, target, num_samples=30):
         fig.tight_layout(h_pad=2)
         for i, matrix in enumerate([lr, hr, sr, diff_sr]):
             for j in range(4):
-                if i == 3:im = axs[j, i].imshow(matrix[j], vmin=-0.05, vmax=0.05)
+                if i == 2: im = axs[j, i].imshow(matrix[j], vmin=np.min(hr[j]), vmax=np.max(hr[j]))
+                elif i == 3: im = axs[j, i].imshow(matrix[j], vmin=-0.05, vmax=0.05)
                 else: im = axs[j, i].imshow(matrix[j])
                 plt.colorbar(im, ax=axs[j, i])
         axs[0, 0].title.set_text('LR')
@@ -325,10 +333,10 @@ model.eval()
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
 #plot_difference(config.TRAIN_FOLDER, model, 'differences/')
-#plot_difference_4ch(config.TRAIN_FOLDER, model, 'diagnostic/')
+plot_difference_4ch(config.TRAIN_FOLDER, model, 'diagnostic/')
 #check_distribution(config.TRAIN_FOLDER, model, 'distributions/', num_samples=10)
 #plot_worst_or_best(config.TRAIN_FOLDER, model, 'best_worse/')
 #bench_time(config.TRAIN_FOLDER + 'hr/', model, num_samples=100)
 # check_parameters()
-check_loss_distribution(model)
+# check_loss_distribution(model)
 
