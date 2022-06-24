@@ -98,7 +98,7 @@ def main(rank, world_size):
     train_dataset, val_dataset = random_split(dataset, [61419, 4096])
 
     train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 8192)) # 512 # 1024 # 2048 # 4096 # 8192
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 2048))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 4096))
 
     config_dict["Training size"] = len(train_dataset)
     config_dict["Validation size"] = len(val_dataset)
@@ -131,7 +131,7 @@ def main(rank, world_size):
         outer_channels=config.OUTER_CHANNELS,
         inner_channels=config.INNER_CHANNELS,
     ).to(rank)
-    # model = original_FSRCNN()
+
     config_dict["maps"] = config.MAPS
     config_dict["in_channels"] = config.IMG_CHANNELS
     config_dict["outer_channels"] = config.OUTER_CHANNELS
@@ -143,7 +143,7 @@ def main(rank, world_size):
     opt = optim.Adam(
         ddp_model.parameters(),
         lr=config.LEARNING_RATE,
-        betas=(0.95, 0.96),
+        betas=(config.BETA1, config.BETA2),
     )
     scheduler = ReduceLROnPlateau(
         opt,

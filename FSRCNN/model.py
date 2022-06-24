@@ -64,10 +64,11 @@ class FSRCNN(nn.Module):
             output_padding=1
         )
 
+
     def forward(self, x):
         bicubic = self.bicubic(x)
         first = self.extract(x)
-        mid = self.expand(self.map(self.shrink(first))) + first
+        mid = self.expand(self.map(self.shrink(first)))
         return self.deconv2(self.deconv1(mid)) + bicubic
 
 

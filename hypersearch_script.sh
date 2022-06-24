@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -A INF22_teongrav_0
 #SBATCH -p m100_usr_prod
-#SBATCH --time 08:00:00                    # format: HH:MM:SS
+#SBATCH --time 24:00:00                    # format: HH:MM:SS
 #SBATCH -N 1                               # 1 node
 #SBATCH --ntasks-per-node=128              # 8 tasks out of 128
 #SBATCH --gres=gpu:4                       # 1 gpus per node out of 4

@@ -253,13 +253,13 @@ def plot_difference_4ch(source, model, target, num_samples=30):
         lr_input = config.transform(lr, minn, maxx)
 
         lr_input = lr_input.unsqueeze(0)
-
         with torch.no_grad():
             sr = model(
                 lr_input
                 .to(config.DEVICE)
             ).cpu()
         sr = sr.squeeze(0)
+
         sr = config.reverse_transform(sr, minn, maxx)
         diff_sr = (sr-hr)/hr
 
@@ -282,6 +282,35 @@ def plot_difference_4ch(source, model, target, num_samples=30):
         plt.close(fig)
     model.train()
 
+
+def l1_batch_wise(tensor1, tensor2):
+    loss = torch.abs(tensor1 - tensor2).sum(dim=(2,3)).mean(dim=1)
+    return loss
+
+
+def check_loss_distribution(model):
+    test_dataset = MyImageFolder()
+
+    test_loader = MultiEpochsDataLoader(
+        test_dataset,
+        batch_size=1024,
+        num_workers=config.NUM_WORKERS,
+        drop_last=False
+    )
+
+    losses = []
+    with torch.no_grad():
+        for low_res, high_res in test_loader:
+            high_res = high_res.to(config.DEVICE)
+            low_res = low_res.to(config.DEVICE)
+            super_res = model(low_res)
+            loss = l1_batch_wise(super_res, high_res)
+            losses.append(loss.cpu().numpy().flatten())
+    losses = [a for loss in losses for a in loss]
+    plt.hist(losses, bins=100)
+    plt.savefig('loss_distribution.png', dpi=300)
+
+
 model = FSRCNN(
     maps=config.MAPS,
     in_channels=config.IMG_CHANNELS,
@@ -296,8 +325,10 @@ model.eval()
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
 #plot_difference(config.TRAIN_FOLDER, model, 'differences/')
-plot_difference_4ch(config.TRAIN_FOLDER, model, 'diagnostic/')
+#plot_difference_4ch(config.TRAIN_FOLDER, model, 'diagnostic/')
 #check_distribution(config.TRAIN_FOLDER, model, 'distributions/', num_samples=10)
 #plot_worst_or_best(config.TRAIN_FOLDER, model, 'best_worse/')
 #bench_time(config.TRAIN_FOLDER + 'hr/', model, num_samples=100)
 # check_parameters()
+check_loss_distribution(model)
+

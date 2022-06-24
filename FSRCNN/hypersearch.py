@@ -28,7 +28,7 @@ def wandb_init(config_dict={}):
         config=config_dict,
         settings=wandb.Settings(start_method='fork'),
         mode="offline",
-        group="local_hyperparameters_2"
+        group="global_hyperparameters_2"
     )
 
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     config_dict = {
         "lr": tune.loguniform(5e-4, 5e-2),
-        "batch_size": tune.choice([16, 32, 64]),
+        "batch_size": tune.choice([32, 64]),
         "beta1": tune.uniform(0.8, 1),
         "beta2": tune.uniform(0.9, 1)
     }
