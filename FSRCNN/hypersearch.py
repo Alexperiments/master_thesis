@@ -63,9 +63,20 @@ def train_fn(train_loader, val_loader, model, opt, loss, scheduler):
 
     return train_loss, val_loss
 
+<<<<<<< HEAD
 
 def main(config):
     wandb_init(config)
+=======
+    scheduler.step(sum(losses)/len(losses))
+
+
+def main(config):
+    dataset = MyImageFolder()
+    train_dataset, val_dataset = random_split(dataset, [18944, 1056])
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0,128))
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0,10))
+>>>>>>> main
 
     dataset = MyImageFolder(working_directory)
     train_dataset, val_dataset = random_split(dataset, [61419, 4096])
@@ -119,6 +130,7 @@ def main(config):
                 wandb.log({"val_loss": val_loss})
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     ray.init(object_store_memory=1e9)  # , address='auto')
 
     config_dict = {
@@ -136,11 +148,41 @@ if __name__ == "__main__":
 
     bohb_search = TuneBOHB()
     bohb_search = tune.suggest.ConcurrencyLimiter(bohb_search, max_concurrent=8)
+=======
+    ray.init(object_store_memory=2e8)
+    #wandb_init()
+    # for early stopping
+    bohb_hyperband = HyperBandForBOHB(
+        time_attr="training_iteration",
+        max_t=cfg.NUM_EPOCHS,
+        reduction_factor=2,
+    )
+
+    reporter = CLIReporter(
+        parameter_columns=["lr", "batch_size"],
+        metric_columns=["val_loss", "training_iteration"]
+    )
+
+    bohb_search = TuneBOHB(max_concurrent=4)
+
+    config_dict = {
+        "lr": tune.grid_search(1e-4, 2e-4, 4e-4, 8e-4, 16e-4, 32e-4, 64e-4, 128e-4),
+        "batch_size": tune.grid_search(128, 256, 512, 1024, 2048, 4096),
+        # wandb config
+        "wandb":{
+            "entity": 'aled',
+            "project": "Optimize FSRCNN",
+            "api_key_file": ".wandbapi.txt",
+            "log_config": True
+        }
+    }
+>>>>>>> main
 
     analysis = tune.run(
         main,
         scheduler=bohb_hyperband,
         search_alg=bohb_search,
+<<<<<<< HEAD
         resources_per_trial={
             "cpu": 8,
             "gpu": 0.5
@@ -149,6 +191,19 @@ if __name__ == "__main__":
         config=config_dict,
         metric="train_loss",
         mode="min",
+=======
+        progress_reporter=reporter,
+        stop={
+            "training_iteration": cfg.NUM_EPOCHS
+        },
+        resources_per_trial={
+            "cpu": 1,
+            "gpu": 0
+        },
+        num_samples=1,
+        config=config_dict,
+        loggers = DEFAULT_LOGGERS + (WandbLogger, )
+>>>>>>> main
     )
 
     print("Best config is:", analysis.best_config)
