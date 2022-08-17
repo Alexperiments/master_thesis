@@ -237,11 +237,6 @@ def plot_difference_4ch(source, model, target, num_samples=30):
     os.system(f"mkdir -p {target}")
     model.eval()
 
-
-    #files = [
-    #    '44651.npy',
-    #]
-
     for file in files[:num_samples]:
         path_lr = os.path.join(lr_folder, file)
         lr = np.float32(np.load(path_lr))
@@ -349,14 +344,9 @@ def check_normalization_values():
 def plot_single_pixels_test(model):
     model.eval()
 
-    delta_max = config.NORM_MAX.copy()
-    delta_min = config.NORM_MIN.copy()
-
     lr = np.load(config.TRAIN_FOLDER+'lr/586161.npy')[0,:,:]
     hr = np.load(config.TRAIN_FOLDER+'hr/586161.npy')[0,:,:]
 
-    delta_min = np.swapaxes(np.array([[delta_min]]), 0, 2)
-    delta_max = np.swapaxes(np.array([[delta_max]]), 0, 2)
     maxx = np.float32(np.amax(lr, axis=(1, 2), keepdims=True))
     minn = np.float32(np.amin(lr, axis=(1, 2), keepdims=True))
 
@@ -375,21 +365,21 @@ def plot_single_pixels_test(model):
     shw = plt.imshow(lr[0,:,:], min)
     plt.xlim([-0.5,19.5])
     plt.ylim([-0.5,19.5])
-    bar = plt.colorbar(shw)
+    plt.colorbar(shw)
     plt.savefig('lr.eps')
 
     plt.clf()
     shw = plt.imshow(sr[0,:,:])
     plt.xlim([-0.5,79.5])
     plt.ylim([-0.5,79.5])
-    bar = plt.colorbar(shw)
+    plt.colorbar(shw)
     plt.savefig('sr.eps')
     
     plt.clf()
     shw = plt.imshow(hr[0,:,:])
     plt.xlim([-0.5,79.5])
     plt.ylim([-0.5,79.5])
-    bar = plt.colorbar(shw)
+    plt.colorbar(shw)
     plt.savefig('hr.eps')
 
 config.DEVICE='cpu'

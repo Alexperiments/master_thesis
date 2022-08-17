@@ -57,11 +57,6 @@ class MultiEpochsDataLoader(DataLoader):
 
 
 class _RepeatSampler(object):
-    """ Sampler that repeats forever.
-    Args:
-        sampler (Sampler)
-    """
-
     def __init__(self, sampler):
         self.sampler = sampler
 
