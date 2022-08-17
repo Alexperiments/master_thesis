@@ -12,6 +12,7 @@ from scipy.interpolate import interp2d
 import config
 from model import FSRCNN
 from utils import load_checkpoint
+from dataset import MyImageFolder, MultiEpochsDataLoader
 
 import time
 
@@ -237,9 +238,9 @@ def plot_difference_4ch(source, model, target, num_samples=30):
     model.eval()
 
 
-    files = [
-        '10641.npy',  '44651.npy', '15851.npy',   '26711.npy',  
-    ]
+    #files = [
+    #    '44651.npy',
+    #]
 
     for file in files[:num_samples]:
         path_lr = os.path.join(lr_folder, file)
@@ -319,6 +320,81 @@ def check_loss_distribution(model):
     plt.savefig('loss_distribution.png', dpi=300)
 
 
+def check_normalization_values():
+    test_dataset = MyImageFolder(transform=True)
+
+    test_loader = MultiEpochsDataLoader(
+        test_dataset,
+        batch_size=512,
+        num_workers=config.NUM_WORKERS,
+        drop_last=False
+    )
+
+    maxs = []
+    mins = []
+    with torch.no_grad():
+        for low_res, high_res in test_loader:
+            high_res = high_res.to(config.DEVICE)
+            low_res = low_res.to(config.DEVICE)
+            batch_hr_max = torch.amax(high_res, dim=(0, 2, 3))
+            batch_hr_min = torch.amin(high_res, dim=(0, 2, 3))
+            batch_lr_max = torch.amax(low_res, dim=(0, 2, 3))
+            batch_lr_min = torch.amin(low_res, dim=(0, 2, 3))
+            maxs.append(batch_hr_max-batch_lr_max)
+            mins.append(batch_lr_min-batch_hr_min)
+    print(torch.amax(torch.stack(maxs, dim=0), axis=0))
+    print(torch.amin(torch.stack(mins, dim=0), axis=0))
+
+
+def plot_single_pixels_test(model):
+    model.eval()
+
+    delta_max = config.NORM_MAX.copy()
+    delta_min = config.NORM_MIN.copy()
+
+    lr = np.load(config.TRAIN_FOLDER+'lr/586161.npy')[0,:,:]
+    hr = np.load(config.TRAIN_FOLDER+'hr/586161.npy')[0,:,:]
+
+    delta_min = np.swapaxes(np.array([[delta_min]]), 0, 2)
+    delta_max = np.swapaxes(np.array([[delta_max]]), 0, 2)
+    maxx = np.float32(np.amax(lr, axis=(1, 2), keepdims=True))
+    minn = np.float32(np.amin(lr, axis=(1, 2), keepdims=True))
+
+    lr_input = config.transform(lr, minn, maxx)
+
+    lr_input = lr_input[0,:,:].unsqueeze(0).unsqueeze(0)
+
+    model = model.float()
+    with torch.no_grad():
+        sr = model(
+            lr_input.float()
+        )
+    sr = sr.squeeze(0)
+    sr = config.reverse_transform(sr, minn, maxx)
+
+    shw = plt.imshow(lr[0,:,:], min)
+    plt.xlim([-0.5,19.5])
+    plt.ylim([-0.5,19.5])
+    bar = plt.colorbar(shw)
+    plt.savefig('lr.eps')
+
+    plt.clf()
+    shw = plt.imshow(sr[0,:,:])
+    plt.xlim([-0.5,79.5])
+    plt.ylim([-0.5,79.5])
+    bar = plt.colorbar(shw)
+    plt.savefig('sr.eps')
+    
+    plt.clf()
+    shw = plt.imshow(hr[0,:,:])
+    plt.xlim([-0.5,79.5])
+    plt.ylim([-0.5,79.5])
+    bar = plt.colorbar(shw)
+    plt.savefig('hr.eps')
+
+config.DEVICE='cpu'
+
+
 model = FSRCNN(
     maps=config.MAPS,
     in_channels=config.IMG_CHANNELS,
@@ -333,10 +409,11 @@ model.eval()
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
 #plot_difference(config.TRAIN_FOLDER, model, 'differences/')
-plot_difference_4ch(config.TRAIN_FOLDER, model, 'diagnostic/')
+#plot_difference_4ch(config.TRAIN_FOLDER, model, 'diagnostic/', 30)
 #check_distribution(config.TRAIN_FOLDER, model, 'distributions/', num_samples=10)
 #plot_worst_or_best(config.TRAIN_FOLDER, model, 'best_worse/')
 #bench_time(config.TRAIN_FOLDER + 'hr/', model, num_samples=100)
 # check_parameters()
 # check_loss_distribution(model)
-
+# check_normalization_values()
+plot_single_pixels_test(model)

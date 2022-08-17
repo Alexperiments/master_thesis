@@ -6,12 +6,13 @@ import config
 
 
 class MyImageFolder(Dataset):
-    def __init__(self, root="."):
+    def __init__(self, root=".", transform=True):
         super(MyImageFolder, self).__init__()
         os.chdir(root)
         self.root_dir = config.TRAIN_FOLDER
         path = os.path.join(self.root_dir, 'hr')
         self.image_files_name = sorted(os.listdir(path))
+        self.transform = transform
 
     def __len__(self):
         return len(self.image_files_name)
@@ -30,13 +31,13 @@ class MyImageFolder(Dataset):
         lr_array = np.float32(np.load(os.path.join(root_and_lr, file_name))[map])
         maxx = np.float32(np.amax(lr_array, axis=(1, 2), keepdims=True) + delta_max)
         minn = np.float32(np.amin(lr_array, axis=(1, 2), keepdims=True) + delta_min)
-        lr_matrix = config.transform(lr_array, minn, maxx)
+        if self.transform: lr_array = config.transform(lr_array, minn, maxx)
 
         root_and_hr = os.path.join(self.root_dir, "hr")
         hr_array = np.float32(np.load(os.path.join(root_and_hr, file_name))[map])
-        hr_matrix = config.transform(hr_array, minn, maxx)
+        if self.transform: hr_array = config.transform(hr_array, minn, maxx)
 
-        return lr_matrix, hr_matrix
+        return lr_array, hr_array
 
 
 class MultiEpochsDataLoader(DataLoader):
