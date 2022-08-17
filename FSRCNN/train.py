@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch import optim
 from torch.utils.data import DataLoader, random_split
+from torch.utils.data.distributed import DistributedSampler
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import torch.distributed as dist
 import torch.multiprocessing as mp
@@ -26,7 +27,7 @@ def wandb_init(config_dict):
         config=config_dict,
         settings=wandb.Settings(start_method='fork'),
         mode="offline",
-	group=f"{datetime.datetime.now()}",
+	group="Aftermath_test",
     )
 
 
@@ -60,55 +61,61 @@ config_dict = {
 
 def train_fn(train_loader, val_loader, model, opt, l1, scheduler, rank):
     loop = tqdm(train_loader, leave=True)
-    losses = []
-    for low_res, high_res in loop:
-        # low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
-        # high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
+    train_losses = []
 
-        high_res = high_res.to(rank)
-        low_res = low_res.to(rank)
+    for low_res, high_res in loop:
+        high_res = high_res.view(-1, 1, 80, 80).to(rank)
+        low_res = low_res.view(-1, 1, 20, 20).to(rank)
         super_res = model(low_res)
         loss = l1(super_res, high_res)
         loop.set_postfix(L1=loss.item())
-        losses.append(loss)
+        train_losses.append(loss)
         loss.backward()
         opt.step()
         opt.zero_grad()
 
     with torch.no_grad():
         model.eval()
-        val_loss = []
+        val_losses = []
         for low_res, high_res in val_loader:
-            high_res = high_res.to(rank)
-            low_res = low_res.to(rank)
-            # low_res = low_res.view(-1, 1, config.LOW_RES, config.LOW_RES)
-            # high_res = high_res.view(-1, 1, config.HIGH_RES, config.HIGH_RES)
-
+            high_res = high_res.view(-1, 1, 80, 80).to(rank)
+            low_res = low_res.view(-1, 1, 20, 20).to(rank)
             super_res = model(low_res)
-            val_loss.append(l1(super_res, high_res).item())
-        if config.LOG_REPORT:
-            wandb.log({"L1 val loss": np.mean(val_loss)})
+            val_losses.append(l1(super_res, high_res).item())
         model.train()
-    if config.LOG_REPORT:
-        wandb.log({"L1 train loss": sum(losses) / len(losses)})
-    scheduler.step(sum(losses) / len(losses))
 
+    val_loss = sum(val_losses) / len(val_losses)
+    train_loss = sum(train_losses) / len(train_losses)
+
+    if config.LOG_REPORT:
+        wandb.log({"L1 val loss": val_loss})
+        wandb.log({"L1 train loss": train_loss})
+    scheduler.step(train_loss)
+
+    return train_loss, val_loss
 
 def main(rank, world_size):
     dataset = MyImageFolder()
-    train_dataset, val_dataset = random_split(dataset, [18944, 1056])
+    train_dataset, val_dataset = random_split(dataset,  [61399, 4096]) # [7488, 512]) # [61399, 4096])
 
-    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 9472))
-    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 528))
+    train_dataset = torch.utils.data.Subset(train_dataset, np.arange(0, 7488)) # 512 # 1024 # 2048 # 4096 # 8192
+    val_dataset = torch.utils.data.Subset(val_dataset, np.arange(0, 512))
 
     config_dict["Training size"] = len(train_dataset)
     config_dict["Validation size"] = len(val_dataset)
 
+    train_sampler = DistributedSampler(
+        train_dataset,
+        num_replicas=world_size,
+        rank=rank,
+        shuffle=True
+    )
+
     train_loader = MultiEpochsDataLoader(
         train_dataset,
         batch_size=config.BATCH_SIZE,
-        shuffle=True,
         num_workers=config.NUM_WORKERS,
+        sampler=train_sampler,
         drop_last=True
     )
     val_loader = MultiEpochsDataLoader(
@@ -136,7 +143,8 @@ def main(rank, world_size):
     initialize_weights(ddp_model)
     opt = optim.Adam(
         ddp_model.parameters(),
-        lr=config.LEARNING_RATE
+        lr=config.LEARNING_RATE,
+        betas=(config.BETA1, config.BETA2),
     )
     scheduler = ReduceLROnPlateau(
         opt,
@@ -163,11 +171,14 @@ def main(rank, world_size):
 
     if config.LOG_REPORT: wandb_init(config_dict)
     for epoch in range(1, config.NUM_EPOCHS + 1):
-        train_fn(train_loader, val_loader, ddp_model, opt, l1, scheduler, rank)
+        train_sampler.set_epoch(epoch)
+        train_loss, val_loss = train_fn(train_loader, val_loader, ddp_model, opt, l1, scheduler, rank)
         print("{0}/{1}".format(epoch, config.NUM_EPOCHS))
+        print(f"Train loss {train_loss:.4f}")
+        print(f"Val loss {val_loss:.4f}")
 
         if epoch % 20 == 0:
-            if config.SAVE_MODEL:
+            if config.SAVE_MODEL & (rank==0):
                 save_checkpoint(ddp_model, opt, scheduler, filename=config.CHECKPOINT)
         if config.SAVE_IMG_CHKPNT:
             if epoch % 100 == 0:

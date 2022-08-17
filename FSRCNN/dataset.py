@@ -6,22 +6,24 @@ import config
 
 
 class MyImageFolder(Dataset):
-    def __init__(self):
+    def __init__(self, root=".", transform=True):
         super(MyImageFolder, self).__init__()
+        os.chdir(root)
         self.root_dir = config.TRAIN_FOLDER
         path = os.path.join(self.root_dir, 'hr')
         self.image_files_name = sorted(os.listdir(path))
+        self.transform = transform
 
     def __len__(self):
         return len(self.image_files_name)
 
     def __getitem__(self, index):
         file_name = self.image_files_name[index]
-        map = [0,1,2,3]
+        map = [0, 1, 2, 3]
         delta_max = config.NORM_MAX.copy()
         delta_min = config.NORM_MIN.copy()
-        #del delta_min[1]
-        #del delta_max[1]
+        # del delta_min[1]
+        # del delta_max[1]
         delta_min = np.swapaxes(np.array([[delta_min]]), 0, 2)
         delta_max = np.swapaxes(np.array([[delta_max]]), 0, 2)
 
@@ -29,13 +31,13 @@ class MyImageFolder(Dataset):
         lr_array = np.float32(np.load(os.path.join(root_and_lr, file_name))[map])
         maxx = np.float32(np.amax(lr_array, axis=(1, 2), keepdims=True) + delta_max)
         minn = np.float32(np.amin(lr_array, axis=(1, 2), keepdims=True) + delta_min)
-        lr_matrix = config.transform(lr_array, minn, maxx)
+        if self.transform: lr_array = config.transform(lr_array, minn, maxx)
 
         root_and_hr = os.path.join(self.root_dir, "hr")
         hr_array = np.float32(np.load(os.path.join(root_and_hr, file_name))[map])
-        hr_matrix = config.transform(hr_array, minn, maxx)
+        if self.transform: hr_array = config.transform(hr_array, minn, maxx)
 
-        return lr_matrix, hr_matrix
+        return lr_array, hr_array
 
 
 class MultiEpochsDataLoader(DataLoader):
@@ -55,10 +57,6 @@ class MultiEpochsDataLoader(DataLoader):
 
 
 class _RepeatSampler(object):
-    """ Sampler that repeats forever.
-    Args:
-        sampler (Sampler)
-    """
     def __init__(self, sampler):
         self.sampler = sampler
 

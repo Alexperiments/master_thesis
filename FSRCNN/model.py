@@ -20,7 +20,7 @@ class FSRCNN(nn.Module):
         maps=5
     ):
         super().__init__()
-        self.bicubic = torch.nn.Upsample(scale_factor=4, mode='bicubic')
+        self.bicubic = torch.nn.Upsample(scale_factor=4, mode='bicubic', align_corners=True)
         self.extract = ConvBlock(
             in_channels,
             out_channels=outer_channels,
@@ -49,14 +49,14 @@ class FSRCNN(nn.Module):
         )
         self.deconv1 = nn.ConvTranspose2d(
             in_channels=outer_channels,
-            out_channels=10,
+            out_channels=in_channels,
             kernel_size=9,
-            stride=2,
-            padding=4,
+            stride=4,
+            padding=3,
             output_padding=1
         )
         self.deconv2 = nn.ConvTranspose2d(
-            in_channels=10,
+            in_channels=inner_channels,
             out_channels=in_channels,
             kernel_size=9,
             stride=2,
@@ -67,7 +67,7 @@ class FSRCNN(nn.Module):
     def forward(self, x):
         bicubic = self.bicubic(x)
         first = self.extract(x)
-        mid = self.expand(self.map(self.shrink(first))) + first
+        mid = self.expand(self.map(self.shrink(first)))
         return self.deconv2(self.deconv1(mid)) + bicubic
 
 
@@ -78,31 +78,37 @@ def initialize_weights(model):
 
 
 def main():
-    from torchsummary import summary
     import config
     import numpy as np
+    import time
 
     in_channels = 4
-    batch_size = 128
+    batch_size = 1
     res = 20
 
     fsrcnn = FSRCNN(
-        maps=5,
+        maps=4,
         in_channels=in_channels,
         outer_channels=56,
         inner_channels=12,
-    ).to(config.DEVICE)
+    ).to('cpu')
 
-    x = torch.randn((batch_size, in_channels, res, res)).to(config.DEVICE)
+    x = torch.randn((batch_size, in_channels, res, res)).to('cpu')
+
     out = fsrcnn(x)
     print(out.shape)
+    t0 = time.time()
+    for _ in range(100):
+        out = fsrcnn(x)
+    print((time.time()-t0)/100)
 
-    summary(fsrcnn, (in_channels, 20, 20))
+    from torchsummaryX import summary
+    summary(fsrcnn, x)
     params_size = 0.24
     for_back_size = 2.20
     gpu_memory_Mb = 15*1000 # 1750
     batch_size = (gpu_memory_Mb - params_size)/(for_back_size)
-    # round to the
+
     batch_pow_2 = np.uint(2**np.uint(np.log2(batch_size)))
     print(f"On the current gpu the best batch size is: {batch_pow_2}")
 

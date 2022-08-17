@@ -96,5 +96,3 @@ def refactor_parameters_file():
     new_columns = [s.replace(" ", "") for s in df.columns]
     df.columns = new_columns
     df.to_pickle(target)
-
-refactor_parameters_file()

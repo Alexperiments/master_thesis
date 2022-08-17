@@ -12,6 +12,7 @@ from scipy.interpolate import interp2d
 import config
 from model import FSRCNN
 from utils import load_checkpoint
+from dataset import MyImageFolder, MultiEpochsDataLoader
 
 import time
 
@@ -235,6 +236,7 @@ def plot_difference_4ch(source, model, target, num_samples=30):
     random.shuffle(files)
     os.system(f"mkdir -p {target}")
     model.eval()
+
     for file in files[:num_samples]:
         path_lr = os.path.join(lr_folder, file)
         lr = np.float32(np.load(path_lr))
@@ -252,14 +254,15 @@ def plot_difference_4ch(source, model, target, num_samples=30):
 
         lr_input = config.transform(lr, minn, maxx)
 
-        lr_input = lr_input.view(-1, 1, config.LOW_RES, config.LOW_RES)
-
+        lr_input = lr_input.unsqueeze(0)
         with torch.no_grad():
             sr = model(
                 lr_input
+                .view(4, 1, 20, 20)
                 .to(config.DEVICE)
             ).cpu()
-        sr = sr.view(-1, config.HIGH_RES, config.HIGH_RES)
+        sr = sr.view(1, 4, 80, 80).squeeze(0)
+
         sr = config.reverse_transform(sr, minn, maxx)
         diff_sr = (sr-hr)/hr
 
@@ -267,7 +270,8 @@ def plot_difference_4ch(source, model, target, num_samples=30):
         fig.tight_layout(h_pad=2)
         for i, matrix in enumerate([lr, hr, sr, diff_sr]):
             for j in range(4):
-                if i == 3:im = axs[j, i].imshow(matrix[j], vmin=-0.05, vmax=0.05)
+                if i == 2: im = axs[j, i].imshow(matrix[j], vmin=np.min(hr[j]), vmax=np.max(hr[j]))
+                elif i == 3: im = axs[j, i].imshow(matrix[j], vmin=-0.05, vmax=0.05)
                 else: im = axs[j, i].imshow(matrix[j])
                 plt.colorbar(im, ax=axs[j, i])
         axs[0, 0].title.set_text('LR')
@@ -283,34 +287,123 @@ def plot_difference_4ch(source, model, target, num_samples=30):
     model.train()
 
 
+def l1_batch_wise(tensor1, tensor2):
+    loss = torch.abs(tensor1 - tensor2).sum(dim=(2,3)).mean(dim=1)
+    return loss
+
+
+def check_loss_distribution(model):
+    test_dataset = MyImageFolder()
+
+    test_loader = MultiEpochsDataLoader(
+        test_dataset,
+        batch_size=1024,
+        num_workers=config.NUM_WORKERS,
+        drop_last=False
+    )
+
+    losses = []
+    with torch.no_grad():
+        for low_res, high_res in test_loader:
+            high_res = high_res.to(config.DEVICE)
+            low_res = low_res.to(config.DEVICE)
+            super_res = model(low_res)
+            loss = l1_batch_wise(super_res, high_res)
+            losses.append(loss.cpu().numpy().flatten())
+    losses = [a for loss in losses for a in loss]
+    plt.hist(losses, bins=100)
+    plt.savefig('loss_distribution.png', dpi=300)
+
+
+def check_normalization_values():
+    test_dataset = MyImageFolder(transform=True)
+
+    test_loader = MultiEpochsDataLoader(
+        test_dataset,
+        batch_size=512,
+        num_workers=config.NUM_WORKERS,
+        drop_last=False
+    )
+
+    maxs = []
+    mins = []
+    with torch.no_grad():
+        for low_res, high_res in test_loader:
+            high_res = high_res.to(config.DEVICE)
+            low_res = low_res.to(config.DEVICE)
+            batch_hr_max = torch.amax(high_res, dim=(0, 2, 3))
+            batch_hr_min = torch.amin(high_res, dim=(0, 2, 3))
+            batch_lr_max = torch.amax(low_res, dim=(0, 2, 3))
+            batch_lr_min = torch.amin(low_res, dim=(0, 2, 3))
+            maxs.append(batch_hr_max-batch_lr_max)
+            mins.append(batch_lr_min-batch_hr_min)
+    print(torch.amax(torch.stack(maxs, dim=0), axis=0))
+    print(torch.amin(torch.stack(mins, dim=0), axis=0))
+
+
+def plot_single_pixels_test(model):
+    model.eval()
+
+    lr = np.load(config.TRAIN_FOLDER+'lr/586161.npy')[0,:,:]
+    hr = np.load(config.TRAIN_FOLDER+'hr/586161.npy')[0,:,:]
+
+    maxx = np.float32(np.amax(lr, axis=(1, 2), keepdims=True))
+    minn = np.float32(np.amin(lr, axis=(1, 2), keepdims=True))
+
+    lr_input = config.transform(lr, minn, maxx)
+
+    lr_input = lr_input[0,:,:].unsqueeze(0).unsqueeze(0)
+
+    model = model.float()
+    with torch.no_grad():
+        sr = model(
+            lr_input.float()
+        )
+    sr = sr.squeeze(0)
+    sr = config.reverse_transform(sr, minn, maxx)
+
+    shw = plt.imshow(lr[0,:,:], min)
+    plt.xlim([-0.5,19.5])
+    plt.ylim([-0.5,19.5])
+    plt.colorbar(shw)
+    plt.savefig('lr.eps')
+
+    plt.clf()
+    shw = plt.imshow(sr[0,:,:])
+    plt.xlim([-0.5,79.5])
+    plt.ylim([-0.5,79.5])
+    plt.colorbar(shw)
+    plt.savefig('sr.eps')
+    
+    plt.clf()
+    shw = plt.imshow(hr[0,:,:])
+    plt.xlim([-0.5,79.5])
+    plt.ylim([-0.5,79.5])
+    plt.colorbar(shw)
+    plt.savefig('hr.eps')
+
+config.DEVICE='cpu'
+
+
 model = FSRCNN(
-    maps=5,
-    in_channels=1,
-    outer_channels=56,
-    inner_channels=12,
+    maps=config.MAPS,
+    in_channels=config.IMG_CHANNELS,
+    outer_channels=config.OUTER_CHANNELS,
+    inner_channels=config.INNER_CHANNELS,
 ).to(config.DEVICE)
-opt = optim.Adam(
-    model.parameters(),
-    lr=config.LEARNING_RATE,
-)
-scheduler = ReduceLROnPlateau(
-    opt,
-    'min',
-    factor=0.5,
-    patience=10,
-    verbose=True
-)
-load_checkpoint(
-    config.CHECKPOINT,
-    model,
-    opt,
-    scheduler
-)
+
+state_dict = torch.load(config.CHECKPOINT)['state_dict']
+state_dict = {k.replace('module.', ''): v for (k, v) in state_dict.items()}
+model.load_state_dict(state_dict)
+model.eval()
 
 #plot_examples(config.TRAIN_FOLDER + "lr/", model, 'upscaled/')
 #plot_difference(config.TRAIN_FOLDER, model, 'differences/')
-plot_difference_4ch(config.TRAIN_FOLDER, model, 'diagnostic/')
+#plot_difference_4ch(config.TRAIN_FOLDER, model, 'diagnostic/', 30)
 #check_distribution(config.TRAIN_FOLDER, model, 'distributions/', num_samples=10)
 #plot_worst_or_best(config.TRAIN_FOLDER, model, 'best_worse/')
 #bench_time(config.TRAIN_FOLDER + 'hr/', model, num_samples=100)
 # check_parameters()
+# check_loss_distribution(model)
+# check_normalization_values()
+plot_single_pixels_test(model)
